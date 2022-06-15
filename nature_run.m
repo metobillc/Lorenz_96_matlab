@@ -98,7 +98,7 @@ for in=1:length(Nxlist)
                                     fprintf('Model III: Nx=%d,F=%5.2f,Kparm=%d, Iparm=%d\n',Nx,F,Kparm,Iparm);
                                     fprintf('Model III: F=%5.2f,Nx=%d,Kparm=%d\n',F,Nx,Kparm);
                                     fprintf('b=%5.2f,c=%5.2f\n',b,c);
-                                    fprefix='\optL05M3_N_';
+                                    fprefix='\L05M3_N_';
                                     model = 3;
                                 end
                                 % create an anonymous function with the required inputs for ode45(), i.e.
