@@ -115,7 +115,7 @@ for in=1:length(Nxlist)
                                 % hand side function where they have limited access.
                                 parms.b = b;
                                 parms.c = c;
-                                loranon = @(t, x) newlorenz(t, x, parms);
+                                loranon = @(t, x) circ_lorenz2005(t, x, parms);
                                 % integrate the equations with one of the available integrators, in this
                                 % case the Runga-Kutta 4,5 method (good for simple, non-stiff systems).
                                 tic;
