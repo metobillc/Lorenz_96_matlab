@@ -1,8 +1,8 @@
 function [tot_err,tot_avar,varargout] = parDA_GKSQ(solver,XIC,Xt,y,outfolder,H,R,...
          g1st,skip,tF,ci,alpha,K,myseed,fstr,savestate,...
-         printcycle,loctype,locstr,locrad,F,Kparm,Iparm,b,c)
+         printcycle,loctype,locstr,locrad,parms)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Bill Campbell Last Modified 10/8/2019
+% Bill Campbell Last Modified 6/16/2022
 % Global-solve Kalman Square Root filter
 % Added covariance localization
 % Added ensemble variance for comparison with squared error
@@ -14,14 +14,18 @@ function [tot_err,tot_avar,varargout] = parDA_GKSQ(solver,XIC,Xt,y,outfolder,H,R
 nskip = 1;
 
 % Our standard choice: very good precision is enforced
-%options=odeset('RelTol',1e-8,'AbsTol',1e-8);
-options=' ';
+% Try to use the same tolerances for DA as in the nature run
+if isfield(parms, 'reltol') && isfield(parms, 'abstol')
+  options=odeset('RelTol',parms.reltol,'AbsTol',parms.abstol);
+else
+  options=' ';
+end
 
 % define temporal grid for the solver solver
 % Can do this outside the ncycle loop, as the lorenz models have no
 % explicit time dependence
 Nt = 3;
-t = linspace(0,tF,Nt);
+tsteps = linspace(0,tF,Nt);
 
 % initialize random number generators
 rng(myseed);
@@ -56,15 +60,18 @@ if (ci > 1.0)
 end
 save_printcycle = printcycle;
 printcycle = min(printcycle,1000);
-detect_lorenz2005(Kparm,Iparm,b,c);
+detect_lorenz2005(parms);
 
 tstart=tic;
+loranon = @(t, x) circ_lorenz2005(t, x, parms);
 for ncycle = 1:Ncycles-1
     %%%%%%%%% Global Kalman Square Root
     %%%%%%%% build ensemble members
     parfor k=1:K
+        % integrate the equations with one of the available integrators, in this
+        % case the Runga-Kutta 4,5 method (good for simple, non-stiff systems).
         M0 = XX(:,k); % posterior ensemble member from previous time step
-        [~,M] = solver(@circ_lorenz2005,t,M0,options,F,Kparm,Iparm,b,c);
+        [~,M] = solver(loranon,tsteps,M0,options);
         ZZ(:,k) = M(Nt,:)'; % forecast (background) ensemble member, which is input as the prior to the DA routine
     end
     ZKSQ(:,:,ncycle+1) = ZZ; % forecast (background) ensemble, which is input as the prior to the DA routine
@@ -125,7 +132,7 @@ if (savestate)    % Create filenames, and open files
         '_1st_',num2str(g1st,'%d\n'),...
         '_skip_',num2str(skip,'%d\n'),...
         '_Nx_',num2str(Nx,'%d\n'),...
-        '_Kp_',num2str(Kparm,'%d\n'),...
+        '_Kp_',num2str(parms.K,'%d\n'),...
         '_seed_',num2str(myseed,'%d\n')];
     newprior = [prior,'_GKSQ'];
     save([newprior,'.mat'],'ZKSQ','-v7.3');
@@ -144,9 +151,10 @@ tot_avar = sum(avar(Nx+1:2*Nx));
 tot_vvar = sum(vstdev(Nx+1:2*Nx).^2);
 display_results(fstr,aerr,avar);
 
-if nargout==3
+if nargout>=3
     varargout{1} = tot_var;
-elseif nargout==4
+end
+if nargout==4
     varargout{2} = tot_vvar;
 end
 end
