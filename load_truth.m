@@ -1,4 +1,8 @@
-function [Zt,abstol,reltol] = load_truth(pathname,ftruth)
+function [Zt,abstol,reltol,varargout] = load_truth(pathname,ftruth)
+% Load arrays and parameters from truth run .mat file
+% Bill Campbell
+% Last modified 6/16/2022
+
 DEFAULT_ABSTOL = 1e-6
 DEFAULT_RELTOL = 1e-3
 
@@ -19,3 +23,20 @@ if isfield(allvars, 'reltol')
 else
     reltol = DEFAULT_RELTOL;
 end
+if nargout >= 4
+    if isfield(allvars, 'Xt')
+	    Xt = allvars.Xt;
+		varargout{1} = Xt.';
+	else
+	    error('Xt not found in %s',ftruth)
+	end
+end
+if nargout == 5
+    if isfield(allvars, 'yt')
+	    Yt = allvars.Yt;
+		varargout{2} = Yt.';
+	else
+	    error('Yt not found in %s',ftruth)
+	end
+end
+end % function load_truth
