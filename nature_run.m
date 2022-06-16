@@ -119,7 +119,7 @@ for in=1:length(Nxlist)
                                 % integrate the equations with one of the available integrators, in this
                                 % case the Runga-Kutta 4,5 method (good for simple, non-stiff systems).
                                 tic;
-                                [t, Zt] = ode45(loranon, tsteps, Xt0, options);
+                                [~, Zt] = ode45(loranon, tsteps, Xt0, options);
                                 toc
                                 % Discard spinup
                                 Zt = Zt((spinup+1):end,:);
