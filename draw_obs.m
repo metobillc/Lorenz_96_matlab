@@ -19,26 +19,8 @@ c = str2double(string{8}(2:end))
 tF = str2double(string{9}(3:end))
 tseed = str2double(string{12}(5:end-4))
 tic;
-allvars = load([pathname,ftruth]); % full nature run
-fn = fieldnames(allvars);
-if isfield(allvars, 'Zt') % Zt is correct here, NOT Xt
-    Xt = allvars.Zt;  % See prior comment
-    Xt = Xt';
-    [N,Ncycles] = size(Xt);
-else
-    error('Zt not found in nature run file %s',ftruth);
-end
-if isfield(allvars, 'abstol')
-    abstol = allvars.abstol;
-else
-    abstol = 1e-6;
-end
-if isfield(allvars, 'reltol')
-    reltol = allvars.reltol;
-else
-    reltol = 1e-3;
-end
-clear allvars;
+[Xt,abstol,reltol] = load_truth(pathname,ftruth);
+[N,Ncycles] = size(Xt);
 
 %% Set up R and H for DA
 prompt={'First var observed','Skip','Ob error','Seedlist','Plotit'};
@@ -70,7 +52,7 @@ for is=1:length(seedlist)
     for ir=1:size(rlist,1)
         % Set up observation operator and ob error covariance matrix
         [Nobs,H,R] = forward(oblist,rlist(ir,:));
-        % Create obs
+        % Create simulated obs with error covariance R and forward model H
         yobs = H*Xt + sqrt( R )*randn(Nobs,Ncycles);
         % Save obs
         fobs = [outfolder,...
