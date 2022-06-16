@@ -3,7 +3,7 @@
 % Using Lorenz 96 Model I, II or III
 % Global Kalman Square Root filter
 % Bill Campbell
-% Last modified 10/8/2019
+% Last modified 6/15/2022
 
 start = datestr(clock);
 fprintf('Started: %s\n',start);
@@ -73,11 +73,11 @@ disp([prompt',answer]);
 % Truth file e.g. L05M3_N960_K32_F15.00_I12_b10.00_c2.50_tf0.05_spinup100_tsteps10000_seed51422
 % Obs file e.g. obs_tf0.05_nc10000_R1.00_N960_K32_F15.00_I12_b10.00_c2.50_tsteps960_tseed51422_oseed73033
 % Nature run location
-outfolder = 'M:\4_8_2011\NREIP\Summer 2020\Lorenz_96_model_for_interns\'; % Local hard drive
+outfolder = 'C:\Users\campbell\Documents\MATLAB\Lorenz_96_model\'; % Local hard drive
 % Load truth and compatible observations
 compatible = false;
 while ~compatible
-    [ftruth,truepath]=uigetfile([outfolder,'L05*'],'Choose truth file:'); % truth trajectory
+    [ftruth,truepath]=uigetfile([outfolder,'*L05*'],'Choose truth file:'); % truth trajectory
     [fobs,obspath]=uigetfile([outfolder,'*obs*'],'Choose obs file:'); % obs trajectory
     % Check compatibility of truth and obs
     compatible = new_check_obs_compatibility(ftruth,fobs);
@@ -85,16 +85,21 @@ end
 % Extract Lorenz 96 Model I, II or III parameters from nature run filename
 string = strsplit(ftruth,'_');
 Kparm = str2num(string{4}(2:end));
+parms.K = Kparm;
 F = str2num(string{5}(2:end));
+parms.F = F;
 Iparm = str2num(string{6}(2:end));
+parms.I = Iparm;
 b = str2num(string{7}(2:end));
+parms.b = b;
 c = str2num(string{8}(2:end));
+parms.c = c;
 
 fname = cell(length(alphavec),1);
 fid = zeros(length(alphavec),1);
 tot_err = zeros(length(alphavec),1);
 tot_var = tot_err;
-NPROC = 28; % This machine has 28 processors
+NPROC = 4; % This machine has 4 processors
 reserve = 1;
 allprocs = NPROC - reserve; % Use all processes available
 % If have enough processors, parallelize over both the alpha parameter and
@@ -114,14 +119,12 @@ for itf = 1:length(tFvec) % Forward model time steps
     ftruth = regexprep(ftruth,'tf_....',['tf_',num2str(tF,'%4.2f\n')]);
     fobs = regexprep(fobs,'tf_....',['tf_',num2str(tF,'%4.2f\n')]);
     fprintf('Loading truth from %s\n',[truepath,ftruth]);
-    Xt = load([truepath,ftruth]); % creates Xt, Nx x Nt
-    fn = fieldnames(Xt);
-    Xt = Xt.(fn{1});
-    Xt=Xt'; % Xt stored in opposite order from normal, Nx x Ncycles
+    [Xt,abstol,reltol] = load_truth(truepath,ftruth); % full nature run
+    parms.abstol = abstol;
+    parms.reltol = reltol;
+    [N,Ncycles] = size(Xt);
     fprintf('Loading obs from %s\n',[obspath,fobs]);
-    y = load([obspath,fobs]); % creates y, Nx x Nt
-    fn = fieldnames(y);
-    y = y.(fn{1});
+    y = load_obs(obspath,fobs); % loads y, Nx x Nt
     % Generate initial ensemble from nature run climatology
     % Equally spaced through time
     ics = floor(linspace(1,size(Xt,2),max(Kvec)+1)); % Kmax+1 x 1
@@ -177,9 +180,10 @@ for itf = 1:length(tFvec) % Forward model time steps
                         fprintf(fid(ialpha),'K=%d, tF=%4.2f, loc %s, rad %d, %d cycles\t%s\t%s\t%s\t%s\t%s\n',...
                             K,tF,locstr,locrad,Ncycles,fstr); %#ok<*PFBNS>
                         tstart=tic;
+                        % Execute a single DA cycle by callint parDA_GKSQ
                         [tot_err(ialpha,:),tot_avar(ialpha,:)] = parDA_GKSQ(solver,XIC,Xt,y,outfolder,H,R,...
                             first,skip,tF,ci,alpha,K,myseed,fstr,savestate,...
-                            printcycle,loctype,locstr,locrad,F,Kparm,Iparm,b,c);
+                            printcycle,loctype,locstr,locrad,parms);
                         tend=toc(tstart);
                         thour=floor(tend/3600);
                         tminute=floor((tend-thour*3600)/60);
@@ -198,9 +202,10 @@ for itf = 1:length(tFvec) % Forward model time steps
                         fprintf(fid(ialpha),'K=%d, tF=%4.2f, loc %s, rad %d, %d cycles\t%s\t%s\t%s\t%s\t%s\n',...
                             K,tF,locstr,locrad,Ncycles,fstr);
                         tstart=tic;
+                        % Execute a single DA cycle by callint parDA_GKSQ
                         [tot_err(ialpha,:),tot_avar(ialpha,:)] = parDA_GKSQ(solver,XIC,Xt,y,outfolder,H,R,...
                             first,skip,tF,ci,alpha,K,myseed,fstr,savestate,...
-                            printcycle,loctype,locstr,locrad,F,Kparm,Iparm,b,c);
+                            printcycle,loctype,locstr,locrad,parms);
                         tend=toc(tstart);
                         thour=floor(tend/3600);
                         tminute=floor((tend-thour*3600)/60);
