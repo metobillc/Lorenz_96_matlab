@@ -7,13 +7,13 @@
 
 start = datestr(clock);
 fprintf('Started: %s\n',start);
-outfolder = 'C:\Users\campbell\Documents\Matlab\Lorenz_96_model'; % Local hard drive
+outfolder = 'C:\Users\campbell\Documents\Lorenz_96_model'; % Local hard drive
 prompt={'State variables','Kparm','Forcing','Iparm','Small damp','Coupling',...
     'Cycles','Spinup','Timestep','ODE AbsTol','ODE RelTol','Seedlist','Plotit'};
 name='Lorenz 96 Model I, II and III Nature Run Parameters';
 numlines=1;
 default={'[960]','[32]','[15]','[12]','[10]','[2.5]',...
-    '1000','0','[0.05]','[1e-6]','[1e-3]','[4921760]','[1]'};
+    '1000','100','[0.05]','[1e-6]','[1e-3]','[4921760]','[1]'};
 answer=inputdlg(prompt,name,numlines,default);i=1;
 % Number of state variables
 Nxlist = str2num(answer{i});i=i+1;
@@ -87,17 +87,16 @@ for in=1:length(Nxlist)
                                 Xt0 = F*(ones(Nx,1)+0.01*randn(Nx,1));
                                 % Integrate
                                 if Kparm==1 % Model I run
-                                    fprintf('Model I: Nx=%d,F=%5.2f,Kparm=%d, Iparm=%d\n',Nx,F,Kparm,Iparm);
+                                    fprintf('Model I: Nx=%d, F=%5.2f, Kparm=%d, Iparm=%d\n',Nx,F,Kparm,Iparm);
                                     fprefix='\L05M1_N';
                                     model = 1; b=1; c=1;
                                 elseif Iparm==1 % Model II run
-                                    fprintf('Model II: Nx=%d,F=%5.2f,Kparm=%d, Iparm=%d\n',Nx,F,Kparm,Iparm);
+                                    fprintf('Model II: Nx=%d, F=%5.2f, Kparm=%d, Iparm=%d\n',Nx,F,Kparm,Iparm);
                                     fprefix='\L05M2_N';
                                     model = 2; b=1; c=1;
                                 else % Model III run
-                                    fprintf('Model III: Nx=%d,F=%5.2f,Kparm=%d, Iparm=%d\n',Nx,F,Kparm,Iparm);
-                                    fprintf('Model III: F=%5.2f,Nx=%d,Kparm=%d\n',F,Nx,Kparm);
-                                    fprintf('b=%5.2f,c=%5.2f\n',b,c);
+                                    fprintf('Model III: Nx=%d, F=%5.2f, Kparm=%d, Iparm=%d, ',Nx,F,Kparm,Iparm);
+                                    fprintf('b=%5.2f, c=%5.2f\n',b,c);
                                     fprefix='\L05M3_N_';
                                     model = 3;
                                 end
@@ -143,18 +142,7 @@ for in=1:length(Nxlist)
                                 if plotit
                                     % plotting the states versus time should be your first check to see if the
                                     % result seems reasonable
-                                    fprintf('Size of Zt is %d',size(Zt))
-                                    figure;
-                                    subplot(211)
-                                    plot(tsteps((spinup+1):end), Zt(:, 1))
-                                    ylabel('Time series, Location 1')
-                                    xlabel('Time [s]')
-                                    ylim([-10 20])
-                                    subplot(212)
-                                    plot(1:Nx, Zt(end, :))
-                                    ylabel('Ring Map, Final Time')
-                                    xlabel('Location')
-                                    ylim([-10 20])
+                                    nature_plots(Zt,tsteps,tF,spinup)
                                 end
                                 % Save nature run
                                 ftruth = [outfolder,...
