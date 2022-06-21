@@ -4,8 +4,9 @@ function nature_plots(Zt, tsteps, tF, spinup)
 [Nsteps, Nx] = size(Zt);
 fprintf('Size of Zt is %d x %d\n',size(Zt))
 figure;
-set(gcf,'Position',[100 200 500 800])
-suptitle('Sample Lorenz ''96 Nature Run Plots')
+set(gcf,'Position',[100 50 500 700])
+% suptitle was apparently deprecated, so
+sgtitle('Sample Lorenz ''96 Nature Run Plots')
 
 % Top panel is time series for a particular location
 subplot(311)
