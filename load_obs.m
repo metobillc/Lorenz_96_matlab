@@ -1,13 +1,13 @@
-function [y,varargout] = load_obs(pathname,fobs)
+function [yobs,varargout] = load_obs(pathname,fobs)
 % Load arrays and optionally parameters from observations .mat file
 % Bill Campbell
-% Last modified 6/16/2022
+% Last modified 6/21/2022
 
 allvars = load([pathname,fobs]); % obs file
-if isfield(allvars, 'y')
-    y = allvars.y;
+if isfield(allvars, 'yobs')
+    yobs = allvars.yobs;
 else
-    error('y not found in obs file %s',fobs);
+    error('yobs not found in obs file %s',fobs);
 end
 if nargout >= 2
     if isfield(allvars, 'abstol')
