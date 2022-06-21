@@ -4,8 +4,9 @@
 % Last modified 6/15/2022
 
 %% Get nature run
-outfolder = 'C:\Users\campbell\Documents\MATLAB\Lorenz_96_model'; % Local hard drive
-[ftruth,pathname]=uigetfile(outfolder,'Load Lorenz 96 Model I, II or III full nature run:'); % truth trajectory
+outfolder = 'C:\Users\campbell\Documents\MATLAB\Lorenz_96_model\'; % Local hard drive
+[ftruth,pathname]=uigetfile([outfolder,'*L05*'],...
+                  'Load Lorenz 96 Model I, II or III full nature run:'); % truth trajectory
 % Extract time step from truth file, e.g.
 % L05M2_N960_K32_F8.00_I1_b1.00_c1.00_tf0.05_spinup100_tsteps10000_seed51422
 % Extract tf, K, F, and seed from truth filename
@@ -95,7 +96,7 @@ if plotit
     plot(1:N, Xt(:, ts))
     grid on
     hold on
-    plot(mask, yobs(:, ts), 'b.')
+    plot(mask, yobs(:, ts), 'r.')
     ylabel('Ring Map')
     xlabel('Location')
     ylim([-10 20])
