@@ -10,10 +10,8 @@ end
 allvars = load([pathname,ftruth]); % full ensemble
 if isfield(allvars, 'ZKSQ') % Prior ensemble
     XZ = allvars.ZKSQ;
-    XZ = XZ.';
 elseif isfield(allvars, 'XKSQ')  % Posterior ensemble
     XZ = allvars.XKSQ;
-    XZ = XZ.';
     if nargout >= 1
         if isfield(allvars, 'ensvarKSQ') % Ensemble variance
             varargout{1} = allvars.ensvarKSQ;

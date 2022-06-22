@@ -1,34 +1,25 @@
 % This script is for data exploration
 % Bill Campbell
-% Last modified 9/16/2016
+% Last modified 6/21/2022
 
 %% Load prior, posterior, truth, and obs
-outfolder='M:\4_8_2011\NREIP\Summer 2020\Lorenz_96_model_for_interns\';
+outfolder='C:\Users\campbell\Documents\MATLAB\Lorenz_96_model\';
 % prior_alpha_1.10_tf_0.05_R_1.00_loc_n40_nc_50_1st_2_skip_4_seed_29418_GKSQ.mat
 [fprior,pprior]=uigetfile([outfolder,'K1000\prior*'],'Prior');
 [fpost,ppost]=uigetfile([outfolder,'K1000\post*'],'Posterior');
 [ftruth,ptruth]=uigetfile([outfolder,'L*'],'Truth');
 [fobs,pobs]=uigetfile([outfolder,'obs*'],'Obs');
 
-prior=load([pprior,fprior]);
-fnprior=fieldnames(prior);
-prior=prior.(fnprior{1});
+prior=load_ensemble(pprior,fprior);
 [ngrid,nens,ncycles]=size(prior);
-post=load([ppost,fpost]);
-fnpost=fieldnames(post);
-post=post.(fnpost{1});
-truth=load([ptruth,ftruth]);
-fntruth=fieldnames(truth);
-truth=truth.(fntruth{1});
-truth=truth';
+post=load_ensemble(ppost,fpost);
+truth=load_truth(ptruth,ftruth);
 truth=truth(:,1:ncycles);
-obs=load([pobs,fobs]);
-fnobs=fieldnames(obs);
-obs=obs.(fnobs{1});
+obs=load_obs(pobs,fobs);
 obs=obs(:,1:ncycles);
 % Skip unobserved gridpoints
 string = strsplit(fprior,'_');
-if length(string)>11,
+if length(string)>11
     first = str2num(string{13});
     skip = str2num(string{15});
 else
@@ -53,7 +44,7 @@ num=20;
 skm1i=1./sqrt(num)./sqrt(K-1);
 Pfsamp = zeros(Nx);
 Pasamp = Pfsamp;
-for t=tf-num+1:tf,
+for t=tf-num+1:tf
     Zt = squeeze(prior(:,:,t));
     Ztbar = repmat(mean(Zt,2),1,K);
     Zt = skm1i*(Zt - Ztbar);
