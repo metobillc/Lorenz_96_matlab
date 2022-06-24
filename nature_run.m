@@ -3,7 +3,7 @@
 % for Lorenz 2005 models I, II, and III
 % See also: draw_obs
 % Bill Campbell
-% Last modified 6/15/2022
+% Last modified 6/24/2022
 
 start = datestr(clock);
 fprintf('Started: %s\n',start);
@@ -13,7 +13,7 @@ prompt={'State variables','Kparm','Forcing','Iparm','Small damp','Coupling',...
 name='Lorenz 96 Model I, II and III Nature Run Parameters';
 numlines=1;
 default={'[960]','[32]','[15]','[12]','[10]','[2.5]',...
-    '1000','100','[0.05]','[1e-6]','[1e-3]','[4921760]','[1]'};
+    '101000','1000','[0.05]','[1e-7]','[1e-5]','[5129331]','[1]'};
 answer=inputdlg(prompt,name,numlines,default);i=1;
 % Number of state variables
 Nxlist = str2num(answer{i});i=i+1;
@@ -60,20 +60,18 @@ for in=1:length(Nxlist)
     Nx = Nxlist(in);
     % Loop over correlation lengths (K parameters)
     for ik=1:length(Kparmlist)
-        Kparm = Kparmlist(ik);
         % create a structure to hold all the constants
-        parms.K = Kparm;
+        parms.K = Kparmlist(ik);
         % Loop over forcing
         for jf=1:length(Flist)
-            F = Flist(jf);
-            parms.F = F;
+            parms.F = Flist(jf);
             for ip=1:length(Iparmlist)
                 Iparm = Iparmlist(ip);
                 parms.I = Iparm;
                 for ib=1:length(blist)
-                    b = blist(ib);
+                    parms.b = blist(ib);
                     for ic=1:length(clist)
-                        c = clist(ic);
+                        parms.c = clist(ic);
                         % Loop over time step sizes
                         for it=1:length(tflist)
                             tF = tflist(it);
@@ -84,7 +82,7 @@ for in=1:length(Nxlist)
                                 % initialize random number generators
                                 rng(seed,'twister');
                                 % Perturb initial state
-                                Xt0 = F*(ones(Nx,1)+0.01*randn(Nx,1));
+                                Xt0 = parms.F*(ones(Nx,1)+0.01*randn(Nx,1));
                                 [model, fprefix] = detect_lorenz2005(parms);
                                 % create an anonymous function with the required inputs for ode45(), i.e.
                                 % (t, x). Note that parms is set to the values above on creation of this
@@ -98,8 +96,6 @@ for in=1:length(Nxlist)
                                 % Point 2 above is better than using global variables to share variables in
                                 % all function scopes or declaring these parameters directly in the right
                                 % hand side function where they have limited access.
-                                parms.b = b;
-                                parms.c = c;
                                 loranon = @(t, x) circ_lorenz2005(t, x, parms);
                                 % integrate the equations with one of the available integrators, in this
                                 % case the Runga-Kutta 4,5 method (good for simple, non-stiff systems).
@@ -113,7 +109,7 @@ for in=1:length(Nxlist)
                                     Xt = zeros(size(Zt));
                                     alpha=(3*Iparm^2+3)/(2*Iparm^3+4*Iparm);
                                     beta=(2*Iparm^2+1)/(2*Iparm^2+Iparm^4);
-                                    even=(mod(Kparm,2)==0);
+                                    even=(mod(parms.K,2)==0);
                                     N = size(Zt,2);
                                     for j=-Iparm:Iparm
                                         fac = (alpha - beta*abs(j)) / (1.0 + even*(abs(j)==Iparm));
@@ -133,11 +129,11 @@ for in=1:length(Nxlist)
                                 % Save nature run
                                 ftruth = [outfolder,...
                                     fprefix,num2str(Nx,'%d\n'),...
-                                    '_K',num2str(Kparm,'%d\n'),...
-                                    '_F',num2str(F,'%5.2f\n'),...
+                                    '_K',num2str(parms.K,'%d\n'),...
+                                    '_F',num2str(parms.F,'%5.2f\n'),...
                                     '_I',num2str(Iparm,'%d\n'),...
-                                    '_b',num2str(b,'%4.2f\n'),...
-                                    '_c',num2str(c,'%4.2f\n'),...
+                                    '_b',num2str(parms.b,'%4.2f\n'),...
+                                    '_c',num2str(parms.c,'%4.2f\n'),...
                                     '_tf',num2str(tF,'%4.2f\n'),...
                                     '_spinup',num2str(spinup,'%d\n'),...
                                     '_tsteps',num2str(length(tsteps)-spinup,'%d\n'),...

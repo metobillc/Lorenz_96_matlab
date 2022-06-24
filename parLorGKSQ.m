@@ -84,11 +84,11 @@ while ~compatible
 end
 % Extract Lorenz 96 Model I, II or III parameters from nature run filename
 string = strsplit(ftruth,'_');
-parms.K = str2double(string{4}(2:end));
-parms.F = str2double(string{5}(2:end));
-parms.I = str2double(string{6}(2:end));
-parms.b = str2double(string{7}(2:end));
-parms.c = str2double(string{8}(2:end));
+parms.K = str2double(string{3}(2:end));
+parms.F = str2double(string{4}(2:end));
+parms.I = str2double(string{5}(2:end));
+parms.b = str2double(string{6}(2:end));
+parms.c = str2double(string{7}(2:end));
 
 fname = cell(length(alphavec),1);
 fid = zeros(length(alphavec),1);

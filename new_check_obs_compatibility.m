@@ -9,26 +9,26 @@ struth=strsplit(ftruth,'_');
 sobs=strsplit(fobs,'_');
 
 % Compare time steps
-tf_truth = struth{9};
+tf_truth = struth{8};
 tf_obs = sobs{2};
 if ~strcmp(tf_truth,tf_obs)
     return
 end
 tF = str2num(tf_obs(3:end));
 % Compare seeds
-seed_truth = ['t' struth{12}(1:end-4)];
+seed_truth = ['t' struth{11}(1:end-4)];
 seed_obs = sobs{11};
 if ~strcmp(seed_truth,seed_obs)
     return
 end
 % Compare grid size
-ng_truth = struth{3}(1:end);
+ng_truth = struth{2}(2:end);
 ng_obs = sobs{5}(2:end);
 if ng_obs ~= ng_truth
     return
 end
 % Compare number of cycles
-ncycles_truth = struth{11}(7:end);
+ncycles_truth = struth{10}(7:end);
 ncycles_obs = sobs{3}(3:end);
 if ncycles_obs > ncycles_truth
     return
