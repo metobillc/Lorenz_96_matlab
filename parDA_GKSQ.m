@@ -72,7 +72,7 @@ for ncycle = 1:Ncycles-1
         % case the Runga-Kutta 4,5 method (good for simple, non-stiff systems).
         M0 = XX(:,k); % posterior ensemble member from previous time step
         [~,M] = solver(loranon,tsteps,M0,options);
-        ZZ(:,k) = M(Nt,:)'; % forecast (background) ensemble member, which is input as the prior to the DA routine
+        ZZ(:,k) = M(end,:).'; % forecast (background) ensemble member, which is input as the prior to the DA routine
     end
     ZKSQ(:,:,ncycle+1) = ZZ; % forecast (background) ensemble, which is input as the prior to the DA routine
 
@@ -90,8 +90,8 @@ for ncycle = 1:Ncycles-1
     if ~mod(ncycle,printcycle)
         % Compute mean value so far
         % Will want to add calculations for ensvar also?
-        [avg,stdev] = mynanstats(scoreKSQ(:,ncycle-printcycle+2:ncycle+1)');
-        [vavg,vstdev] = mynanstats(ensvarKSQ(:,ncycle-printcycle+2:ncycle+1)');
+        [avg,stdev] = mynanstats(scoreKSQ(:,ncycle-printcycle+2:ncycle+1).');
+        [vavg,vstdev] = mynanstats(ensvarKSQ(:,ncycle-printcycle+2:ncycle+1).');
         if isscalar(stdev)
             stdev = repmat(stdev,1,2*Nx);
         end
@@ -104,7 +104,7 @@ for ncycle = 1:Ncycles-1
         telapsed=toc(tstart);
         fprintf('Cycle = %d of %d: K=%d,tF=%4.2f,alpha=%5.3f,seed=%d,time=%5.2f seconds\n',...
             ncycle,Ncycles,K,tF,alpha,myseed,telapsed);
-        display_results(fstr,avg',vavg');
+        display_results(fstr,avg.',vavg.');
         % First fix plot_results, then add ensvar
         plot_results(first,ncycle,aerr,variance,Ncycles,printcycle,ci,K);
         if first
@@ -143,10 +143,10 @@ end % if (savestate)
 
 spinup = 100;
 fprintf('Mean Posterior Error after spinup (%d cycles)\n',spinup);
-[aerr,stdev] = mynanstats(scoreKSQ(:,spinup+1:end)');
+[aerr,stdev] = mynanstats(scoreKSQ(:,spinup+1:end).');
 tot_err = sum(aerr(Nx+1:2*Nx));
 tot_var = sum(stdev(Nx+1:2*Nx).^2);
-[avar,vstdev] = mynanstats(ensvarKSQ(:,spinup+1:end)');
+[avar,vstdev] = mynanstats(ensvarKSQ(:,spinup+1:end).');
 tot_avar = sum(avar(Nx+1:2*Nx));
 tot_vvar = sum(vstdev(Nx+1:2*Nx).^2);
 display_results(fstr,aerr,avar);
