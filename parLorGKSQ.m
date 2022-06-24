@@ -78,36 +78,31 @@ outfolder = 'C:\Users\campbell\Documents\MATLAB\Lorenz_96_model\'; % Local hard 
 compatible = false;
 while ~compatible
     [ftruth,truepath]=uigetfile([outfolder,'*L05*'],'Choose truth file:'); % truth trajectory
-    [fobs,obspath]=uigetfile([outfolder,'*obs*'],'Choose obs file:'); % obs trajectory
+    [fobs,obspath]=uigetfile([outfolder,'obs*'],'Choose obs file:'); % obs trajectory
     % Check compatibility of truth and obs
     compatible = new_check_obs_compatibility(ftruth,fobs);
 end
 % Extract Lorenz 96 Model I, II or III parameters from nature run filename
 string = strsplit(ftruth,'_');
-Kparm = str2num(string{4}(2:end));
-parms.K = Kparm;
-F = str2num(string{5}(2:end));
-parms.F = F;
-Iparm = str2num(string{6}(2:end));
-parms.I = Iparm;
-b = str2num(string{7}(2:end));
-parms.b = b;
-c = str2num(string{8}(2:end));
-parms.c = c;
+parms.K = str2double(string{4}(2:end));
+parms.F = str2double(string{5}(2:end));
+parms.I = str2double(string{6}(2:end));
+parms.b = str2double(string{7}(2:end));
+parms.c = str2double(string{8}(2:end));
 
 fname = cell(length(alphavec),1);
 fid = zeros(length(alphavec),1);
 tot_err = zeros(length(alphavec),1);
 tot_var = tot_err;
-NPROC = 4; % This machine has 4 processors
+NPROC = feature('numcores'); % This machine has 4 processors
 reserve = 1;
 allprocs = NPROC - reserve; % Use all processes available
 % If have enough processors, parallelize over both the alpha parameter and
 % number of ensemble members
 parprocs = min([allprocs,length(alphavec)]); % Devote max resources to parameters, devote remainder to ensemble members
 % To run with only one processor, uncomment the two lines below
-parprocs = 0;
-ensprocs = 1;
+% parprocs = 0;
+% myprocs = 1;
 myprocs = parprocs; % Can be less then allprocs for small ensembles
 if myprocs > 1 && isempty(gcp)
     parpool(myprocs);
@@ -118,13 +113,10 @@ for itf = 1:length(tFvec) % Forward model time steps
     % Load nature run and observations for this time step
     ftruth = regexprep(ftruth,'tf_....',['tf_',num2str(tF,'%4.2f\n')]);
     fobs = regexprep(fobs,'tf_....',['tf_',num2str(tF,'%4.2f\n')]);
-    fprintf('Loading truth from %s\n',[truepath,ftruth]);
     [Xt,abstol,reltol] = load_truth(truepath,ftruth); % full nature run
     parms.abstol = abstol;
     parms.reltol = reltol;
-    [N,Ncycles] = size(Xt);
-    fprintf('Loading obs from %s\n',[obspath,fobs]);
-    y = load_obs(obspath,fobs); % loads y, Nx x Nt
+    y = load_obs(obspath,fobs);  % observations consistent with nature run
     % Generate initial ensemble from nature run climatology
     % Equally spaced through time
     ics = floor(linspace(1,size(Xt,2),max(Kvec)+1)); % Kmax+1 x 1
