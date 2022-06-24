@@ -24,6 +24,6 @@ if nargout >= 1
     varargout{1} = model;
 end
 if nargout ==2
-    prefix = sprintf('\L05M%d_N',model);
+    prefix = sprintf('\\L05M%d_N',model);
     varargout{2} = prefix;
 end
