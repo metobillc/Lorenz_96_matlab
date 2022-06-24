@@ -85,21 +85,7 @@ for in=1:length(Nxlist)
                                 rng(seed,'twister');
                                 % Perturb initial state
                                 Xt0 = F*(ones(Nx,1)+0.01*randn(Nx,1));
-                                % Integrate
-                                if Kparm==1 % Model I run
-                                    fprintf('Model I: Nx=%d, F=%5.2f, Kparm=%d, Iparm=%d\n',Nx,F,Kparm,Iparm);
-                                    fprefix='\L05M1_N';
-                                    model = 1; b=1; c=1;
-                                elseif Iparm==1 % Model II run
-                                    fprintf('Model II: Nx=%d, F=%5.2f, Kparm=%d, Iparm=%d\n',Nx,F,Kparm,Iparm);
-                                    fprefix='\L05M2_N';
-                                    model = 2; b=1; c=1;
-                                else % Model III run
-                                    fprintf('Model III: Nx=%d, F=%5.2f, Kparm=%d, Iparm=%d, ',Nx,F,Kparm,Iparm);
-                                    fprintf('b=%5.2f, c=%5.2f\n',b,c);
-                                    fprefix='\L05M3_N_';
-                                    model = 3;
-                                end
+                                [model, fprefix] = detect_lorenz2005(parms);
                                 % create an anonymous function with the required inputs for ode45(), i.e.
                                 % (t, x). Note that parms is set to the values above on creation of this
                                 % function.
