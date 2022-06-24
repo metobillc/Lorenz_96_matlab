@@ -11,14 +11,17 @@ outfolder = 'C:\Users\campbell\Documents\MATLAB\Lorenz_96_model\'; % Local hard 
 % L05M2_N960_K32_F8.00_I1_b1.00_c1.00_tf0.05_spinup100_tsteps10000_seed51422
 % Extract tf, K, F, and seed from truth filename
 string=strsplit(ftruth,'_');
-model=str2double(string{1}(end))
-Kparm = str2double(string{4}(2:end))
-F = str2double(string{5}(2:end))
-Iparm = str2double(string{6}(2:end))
-b = str2double(string{7}(2:end))
-c = str2double(string{8}(2:end))
-tF = str2double(string{9}(3:end))
-tseed = str2double(string{12}(5:end-4))
+idx=1;     model = str2double(string{idx}(end))
+idx=idx+1; Nx = str2double(string{idx}(2:end))
+idx=idx+1; Kparm = str2double(string{idx}(2:end))
+idx=idx+1; F = str2double(string{idx}(2:end))
+idx=idx+1; Iparm = str2double(string{idx}(2:end))
+idx=idx+1; b = str2double(string{idx}(2:end))
+idx=idx+1; c = str2double(string{idx}(2:end))
+idx=idx+1; tF = str2double(string{idx}(3:end))
+idx=idx+1; spinup =str2double(string{idx}(7:end))
+idx=idx+1; Ncycles = str2double(string{idx}(7:end))
+idx=idx+1; tseed = str2double(string{idx}(5:end-4))
 tic;
 [Xt,abstol,reltol] = load_truth(pathname,ftruth);
 [N,Ncycles] = size(Xt);
@@ -92,11 +95,11 @@ if plotit
     ylim([-10 20])
     title(sprintf('Time series at node %d',node))
     subplot(212)
-    ts = 1000;
+    ts = Ncycles;
     plot(1:N, Xt(:, ts))
     grid on
     hold on
-    plot(mask, yobs(:, ts), 'r.')
+    plot(mask, yobs(:, ts), 'ro')
     ylabel('Ring Map')
     xlabel('Location')
     ylim([-10 20])
