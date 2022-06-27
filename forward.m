@@ -1,4 +1,5 @@
 function [Nobs,H,R] = forward(oblist,rlist)
+% R is always diagonal, we can relax this assumption later.
 % May not observe every gridpoint, so 
 % H will be 1 where oblist is 1, 0 otherwise
 Nobsall = length(oblist);
@@ -9,7 +10,7 @@ for i=1:Nobs
     H(i,idx(i))=oblist(idx(i));
 end
 % Again since we may not observe every gridpoint,
-% size of R will vary. R is always diagonal.
+% size of R will vary.
 if length(rlist(idx))==1
     R = rlist*eye(Nobs,Nobs);
 elseif length(rlist(idx))==Nobs
