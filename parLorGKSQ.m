@@ -90,6 +90,21 @@ parms.I = str2double(string{5}(2:end));
 parms.b = str2double(string{6}(2:end));
 parms.c = str2double(string{7}(2:end));
 
+%% Parameter adjustment
+% Allow experiments with parameters that differ from
+% the nature run parameters
+prompt={'K(parm)','I(parm)','F(orcing)','b (damping)','c (coupling)'};
+name='Parameter adjustment';
+numlines=1;
+altdefault={parms.K,parms.I,parms.F,parms.b,parms.c};
+answer=inputdlg(prompt,name,numlines,altdefault);i=1;
+parms.K = str2double(answer{i});i=i+1;
+parms.I = str2double(answer{i});i=i+1;
+parms.F = str2double(answer{i});i=i+1;
+parms.b = str2double(answer{i});i=i+1;
+parms.c = str2double(answer{i});
+
+%% Parallelization options
 fname = cell(length(alphavec),1);
 fid = zeros(length(alphavec),1);
 tot_err = zeros(length(alphavec),1);
@@ -107,6 +122,8 @@ myprocs = parprocs; % Can be less then allprocs for small ensembles
 if myprocs > 1 && isempty(gcp)
     parpool(myprocs);
 end
+
+%% Main loop
 %profile on
 for itf = 1:length(tFvec) % Forward model time steps
     tF = tFvec(itf);
