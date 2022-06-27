@@ -57,7 +57,8 @@ for is=1:length(seedlist)
         % Set up observation operator and ob error covariance matrix
         [Nobs,H,R] = forward(oblist,rlist(ir,:));
         % Create simulated obs with error covariance R and forward model H
-        yobs = H*Xt + sqrt( R )*randn(Nobs,Ncycles);
+        Rsqrt = chol(R, 'lower'); % R need not be diagonal
+        yobs = H * Xt + Rsqrt * randn(Nobs,Ncycles);
         % Save obs
         fobs = [outfolder,...
             '\obs_tf',num2str(tF,'%4.2f\n'),...
