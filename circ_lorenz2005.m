@@ -17,9 +17,9 @@ if (Iparm<1 || Iparm>K)
     error('Iparm=%d must be an integer between 1 and K=%d, inclusive\n',Iparm,K);
 end
 if K ==1
-  %% Simpler code for model I
-  dZ = - Z + F; % Lorenz 2005, model I damping and forcing terms
-  dZ = dZ + (circshift(Z,-1) - circshift(Z,2)) .* circshift(Z,1);
+  %% Simpler code for model I (eq. 1 of Lorenz 2005)
+  dZ = - Z + F; % last two terms (damping and forcing)
+  dZ = dZ + (circshift(Z,-1) - circshift(Z,2)) .* circshift(Z,1); % advection terms
   return
 elseif Iparm==1
   model=2;
