@@ -1,6 +1,6 @@
 function [tot_err,tot_avar,varargout] = parDA_GKSQ(solver,XIC,Xt,y,outfolder,H,R,...
          g1st,skip,tF,ci,alpha,K,myseed,fstr,savestate,...
-         printcycle,loctype,locstr,locrad,parms)
+         printcycle,loctype,locstr,locrad,parms,trueparms)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Bill Campbell Last Modified 6/16/2022
 % Global-solve Kalman Square Root filter
@@ -139,6 +139,10 @@ if (savestate)    % Create filenames, and open files
     posterior = strrep(prior,'prior','posterior');
     newpost  = [posterior,'_GKSQ'];
     save([newpost,'.mat'],'XKSQ','scoreKSQ','ensvarKSQ','-v7.3');
+    parmfile = strrep(prior,'prior','trueparms');
+    if ~isequal(parms,trueparms)
+        save([parmfile,'.mat'],'trueparms','-v7.3');
+    end
 end % if (savestate)
 
 spinup = 100;

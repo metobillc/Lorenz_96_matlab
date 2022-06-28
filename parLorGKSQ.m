@@ -84,11 +84,11 @@ while ~compatible
 end
 % Extract Lorenz 96 Model I, II or III parameters from nature run filename
 string = strsplit(ftruth,'_');
-parms.K = str2double(string{3}(2:end));
-parms.F = str2double(string{4}(2:end));
-parms.I = str2double(string{5}(2:end));
-parms.b = str2double(string{6}(2:end));
-parms.c = str2double(string{7}(2:end));
+nature.K = str2double(string{3}(2:end));
+nature.F = str2double(string{4}(2:end));
+nature.I = str2double(string{5}(2:end));
+nature.b = str2double(string{6}(2:end));
+nature.c = str2double(string{7}(2:end));
 
 %% Parameter adjustment
 % Allow experiments with parameters that differ from
@@ -96,8 +96,9 @@ parms.c = str2double(string{7}(2:end));
 prompt={'K(parm)','I(parm)','F(orcing)','b (damping)','c (coupling)'};
 name='Parameter adjustment';
 numlines=1;
-altdefault={parms.K,parms.I,parms.F,parms.b,parms.c};
-answer=inputdlg(prompt,name,numlines,altdefault);i=1;
+default={num2str(nature.K),num2str(nature.I),num2str(nature.F),...
+            num2str(nature.b),num2str(nature.c)};
+answer=inputdlg(prompt,name,numlines,default);i=1;
 parms.K = str2double(answer{i});i=i+1;
 parms.I = str2double(answer{i});i=i+1;
 parms.F = str2double(answer{i});i=i+1;
@@ -190,9 +191,10 @@ for itf = 1:length(tFvec) % Forward model time steps
                             K,tF,locstr,locrad,Ncycles,fstr); %#ok<*PFBNS>
                         tstart=tic;
                         % Execute a single DA cycle by callint parDA_GKSQ
-                        [tot_err(ialpha,:),tot_avar(ialpha,:)] = parDA_GKSQ(solver,XIC,Xt,y,outfolder,H,R,...
+                        [tot_err(ialpha,:),tot_avar(ialpha,:)] = ...
+                            parDA_GKSQ(solver,XIC,Xt,y,outfolder,H,R,...
                             first,skip,tF,ci,alpha,K,myseed,fstr,savestate,...
-                            printcycle,loctype,locstr,locrad,parms);
+                            printcycle,loctype,locstr,locrad,parms,nature);
                         tend=toc(tstart);
                         thour=floor(tend/3600);
                         tminute=floor((tend-thour*3600)/60);
@@ -212,9 +214,10 @@ for itf = 1:length(tFvec) % Forward model time steps
                             K,tF,locstr,locrad,Ncycles,fstr);
                         tstart=tic;
                         % Execute a single DA cycle by callint parDA_GKSQ
-                        [tot_err(ialpha,:),tot_avar(ialpha,:)] = parDA_GKSQ(solver,XIC,Xt,y,outfolder,H,R,...
+                        [tot_err(ialpha,:),tot_avar(ialpha,:)] = ...
+                            parDA_GKSQ(solver,XIC,Xt,y,outfolder,H,R,...
                             first,skip,tF,ci,alpha,K,myseed,fstr,savestate,...
-                            printcycle,loctype,locstr,locrad,parms);
+                            printcycle,loctype,locstr,locrad,parms,nature);
                         tend=toc(tstart);
                         thour=floor(tend/3600);
                         tminute=floor((tend-thour*3600)/60);
