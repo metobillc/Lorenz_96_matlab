@@ -10,9 +10,9 @@ fprintf('Started: %s\n',start);
 plotit = 0;
 %% Parameter input
 prompt={'Solver','Cycles','First var observed','Grid Skip','Time Skip',...
-    'Ob error','Ensemble size(s)','Confidence level','Prior inflation(s)',...
-    'Cycling interval','Seedlist','Cycles per print','Localization Type',...
-    'Localization radius','Save state'};
+    'Ob error','Ensemble size(s)','Confidence level(s)','Prior inflation(s)',...
+    'Cycling interval(s0','Seed(s)','Cycles per print','Localization Type',...
+    'Localization radi(us,i)','Save state'};
 name='Filter Input';
 numlines=1;
 altdefault={'@ode45','200','1','1','1',...
@@ -126,7 +126,7 @@ end
 
 %% Main loop
 %profile on
-for itf = 1:length(tFvec) % Forward model time steps
+for itf = 1:length(tFvec) % Forward model time steps, NOT a time loop through Ncycles
     tF = tFvec(itf);
     % Load nature run and observations for this time step
     ftruth = regexprep(ftruth,'tf_....',['tf_',num2str(tF,'%4.2f\n')]);
@@ -190,7 +190,7 @@ for itf = 1:length(tFvec) % Forward model time steps
                         fprintf(fid(ialpha),'K=%d, tF=%4.2f, loc %s, rad %d, %d cycles\t%s\t%s\t%s\t%s\t%s\n',...
                             K,tF,locstr,locrad,Ncycles,fstr); %#ok<*PFBNS>
                         tstart=tic;
-                        % Execute a single DA cycle by callint parDA_GKSQ
+                        % Execute up to Ncycles-1 DA cycles
                         [tot_err(ialpha,:),tot_avar(ialpha,:)] = ...
                             parDA_GKSQ(solver,XIC,Xt,y,outfolder,H,R,...
                             first,skip,tF,ci,alpha,K,myseed,fstr,savestate,...
@@ -213,7 +213,7 @@ for itf = 1:length(tFvec) % Forward model time steps
                         fprintf(fid(ialpha),'K=%d, tF=%4.2f, loc %s, rad %d, %d cycles\t%s\t%s\t%s\t%s\t%s\n',...
                             K,tF,locstr,locrad,Ncycles,fstr);
                         tstart=tic;
-                        % Execute a single DA cycle by callint parDA_GKSQ
+                        % Execute up to Ncycles-1 DA cycles
                         [tot_err(ialpha,:),tot_avar(ialpha,:)] = ...
                             parDA_GKSQ(solver,XIC,Xt,y,outfolder,H,R,...
                             first,skip,tF,ci,alpha,K,myseed,fstr,savestate,...
@@ -267,7 +267,7 @@ for itf = 1:length(tFvec) % Forward model time steps
             end % localization radii
         end % seeds
     end % ensemble sizes
-end % time steps
+end % different time steps, NOT a time loop through Ncycles
 % if ~isempty(gcp('nocreate')),
 %     delete(gcp);
 % end
