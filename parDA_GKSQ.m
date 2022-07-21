@@ -1,6 +1,6 @@
-function [tot_err,tot_avar,varargout] = parDA_GKSQ(solver,XIC,Xt,y,outfolder,H,R,...
+function [tot_err,tot_avar,varargout] = parDA_GKSQ(XIC,Xt,y,outfolder,H,R,...
          g1st,skip,tF,ci,alpha,K,myseed,fstr,savestate,...
-         printcycle,loctype,locstr,locrad,parms,trueparms)
+         printcycle,loctype,locstr,locrad,parms,trueparms,climvar)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Bill Campbell Last Modified 6/16/2022
 % Global-solve Kalman Square Root filter
@@ -21,7 +21,7 @@ else
   options=' ';
 end
 
-% define temporal grid for the solver solver
+% define temporal grid for the solver
 % Can do this outside the ncycle loop, as the lorenz models have no
 % explicit time dependence
 Nt = 3;
@@ -71,7 +71,7 @@ for ncycle = 1:Ncycles-1
         % integrate the equations with one of the available integrators, in this
         % case the Runga-Kutta 4,5 method (good for simple, non-stiff systems).
         M0 = XX(:,k); % posterior ensemble member from previous time step
-        [~,M] = solver(loranon,tsteps,M0,options);
+        [~,M] = ode45(loranon,tsteps,M0,options);
         ZZ(:,k) = M(end,:).'; % forecast (background) ensemble member, which is input as the prior to the DA routine
     end
     ZKSQ(:,:,ncycle+1) = ZZ; % forecast (background) ensemble, which is input as the prior to the DA routine
@@ -87,26 +87,29 @@ for ncycle = 1:Ncycles-1
     XKSQ(:,:,ncycle+1) = XX; % posterior
     
     % Diagnostic output
-    if ~mod(ncycle,printcycle)
+    if ~mod(ncycle,printcycle) || ncycle==Ncycles-1
         % Compute mean value so far
         % Will want to add calculations for ensvar also?
-        [avg,stdev] = mynanstats(scoreKSQ(:,ncycle-printcycle+2:ncycle+1).');
-        [vavg,vstdev] = mynanstats(ensvarKSQ(:,ncycle-printcycle+2:ncycle+1).');
-        if isscalar(stdev)
-            stdev = repmat(stdev,1,2*Nx);
+        [time_avg,time_stdev] = mynanstats(scoreKSQ(:,ncycle-printcycle+2:ncycle+1).'); % [2*Nx x 1,2* Nx x 1]
+        [time_vavg,~] = mynanstats(ensvarKSQ(:,ncycle-printcycle+2:ncycle+1).');
+        if isscalar(time_stdev)
+            time_stdev = repmat(time_stdev,1,2*Nx);
         end
-        if isscalar(vstdev)
-            vstdev = repmat(vstdev,1,2*Nx);
-        end
-        aerr = sum(avg(Nx+1:2*Nx));
-        variance = sum(stdev(Nx+1:2*Nx).^2);
+        % Normalize by climvar for plotting
+        prior_space_mse_norm   = mean(time_avg(1:Nx))/climvar; % scalar
+        post_space_mse_norm   = mean(time_avg(Nx+1:2*Nx))/climvar; % scalar
+		time_var = time_stdev.^2;
+        prior_space_varse_norm = mean(time_var(1:Nx))/climvar; % scalar
+        post_space_varse_norm = mean(time_var(Nx+1:2*Nx))/climvar; % scalar
         % Estimate timing
         telapsed=toc(tstart);
         fprintf('Cycle = %d of %d: K=%d,tF=%4.2f,alpha=%5.3f,seed=%d,time=%5.2f seconds\n',...
             ncycle,Ncycles,K,tF,alpha,myseed,telapsed);
-        display_results(fstr,avg.',vavg.');
+        display_results(fstr,time_avg.',time_vavg.');
         % First fix plot_results, then add ensvar
-        plot_results(first,ncycle,aerr,variance,Ncycles,printcycle,ci,K);
+        plot_results(first,ncycle,prior_space_mse_norm,prior_space_varse_norm,...
+                     post_space_mse_norm,post_space_varse_norm,...
+                     Ncycles,printcycle,ci,K);
         if first
             t_estimate = Ncycles./printcycle.*telapsed;
             thour=floor(t_estimate/3600);
