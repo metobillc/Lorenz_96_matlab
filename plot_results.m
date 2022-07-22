@@ -13,15 +13,26 @@ if first==true
     set(gca,'xlim',[1 Ncycles]);
     grid on
 end
-figure(h);
-hold on
-prior_stderr = sqrt(prior_varse_norm/current_cycle);
+
+% Need to compute effective N, which is less than current_cycle
+% because of temporal autocovariance
+% For now, assume with a 6-hr DA cycle that the decorrelation length
+% scale is 2.5 days = 10 cycles. Later should formally compute the
+% lag-1 autocorrelation rho, then Neff = N * (1 - rho)/(1 + rho)
+factor = 1/10;
+Neff = current_cycle * factor;
+% Now compute the standard error as the stdev / sqrt(Neff)
+% This is not quite correct either, as we are dealing with positive
+% definite quantities, which are non-Gaussian close to zero
+prior_stderr = sqrt(prior_varse_norm/Neff);
 prior_upper = prior_mse_norm + cifac*prior_stderr;
 prior_lower = prior_mse_norm - cifac*prior_stderr;
-post_stderr = sqrt(post_varse_norm/current_cycle);
+post_stderr = sqrt(post_varse_norm/Neff);
 post_upper = post_mse_norm + cifac*post_stderr;
 post_lower = post_mse_norm - cifac*post_stderr;
 da_spinup = 300;
+figure(h);
+hold on
 if current_cycle >= da_spinup
     plot(current_cycle,prior_mse_norm,'m.',...
         current_cycle,prior_upper,'g',current_cycle,prior_lower,'g');
