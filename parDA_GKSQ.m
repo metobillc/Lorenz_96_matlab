@@ -124,8 +124,20 @@ for ncycle = 1:Ncycles-1
     
 end % end number of cycles
 
+spinup = 100;
+fprintf('Mean Posterior Error after %d-cycle spinup\n',spinup);
+[aerr,stdev] = mynanstats(scoreKSQ(:,spinup+1:end).');
+tot_err = sum(aerr(Nx+1:2*Nx));
+tot_var = sum(stdev(Nx+1:2*Nx).^2);
+[avar,vstdev] = mynanstats(ensvarKSQ(:,spinup+1:end).');
+tot_avar = sum(avar(Nx+1:2*Nx));
+tot_vvar = sum(vstdev(Nx+1:2*Nx).^2);
+display_results(fstr,aerr,avar);
+
 % Save states in .mat files
 if (savestate)    % Create filenames, and open files
+    tsave=tic;
+    fprintf('Saving prior, posterior, parameters...');
     prior = [outfolder,'K',num2str(K,'%d\n'),'\',...
         'prior_alpha_',num2str(alpha,'%5.3f\n'),...
         '_tf_',num2str(tF,'%4.2f\n'),...
@@ -146,17 +158,10 @@ if (savestate)    % Create filenames, and open files
     if ~isequal(parms,trueparms)
         save([parmfile,'.mat'],'trueparms','-v7.3');
     end
+    fprintf('took %5.3f seconds.\n',toc(tsave));
 end % if (savestate)
 
-spinup = 100;
-fprintf('Mean Posterior Error after %d-cycle spinup\n',spinup);
-[aerr,stdev] = mynanstats(scoreKSQ(:,spinup+1:end).');
-tot_err = sum(aerr(Nx+1:2*Nx));
-tot_var = sum(stdev(Nx+1:2*Nx).^2);
-[avar,vstdev] = mynanstats(ensvarKSQ(:,spinup+1:end).');
-tot_avar = sum(avar(Nx+1:2*Nx));
-tot_vvar = sum(vstdev(Nx+1:2*Nx).^2);
-display_results(fstr,aerr,avar);
+
 
 if nargout>=3
     varargout{1} = tot_var;
