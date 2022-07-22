@@ -149,7 +149,7 @@ if (savestate)    % Create filenames, and open files
 end % if (savestate)
 
 spinup = 100;
-fprintf('Mean Posterior Error after spinup (%d cycles)\n',spinup);
+fprintf('Mean Posterior Error after %d-cycle spinup\n',spinup);
 [aerr,stdev] = mynanstats(scoreKSQ(:,spinup+1:end).');
 tot_err = sum(aerr(Nx+1:2*Nx));
 tot_var = sum(stdev(Nx+1:2*Nx).^2);
