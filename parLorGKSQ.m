@@ -7,7 +7,7 @@
 
 %% Parameter input
 [Ncycles, first, skip, oberr, Kvec, ci, alphavec, tFvec, fstr, seedlist,...
- printcycle, loctype, locstr, locradlist, savestate, plotit] =...
+ printcycle, loctype, locstr, locradlist, savestate, ring_movie] =...
 input_params;
 
 %% Nature run and observations of the truth
@@ -104,7 +104,7 @@ for itf = 1:length(tFvec)
                             printcycle,loctype,locstr,locrad,parms,nature,...
                             climvar);
                         terr = tot_err(ialpha,:);
-                        elapsed(tstart,palpha,ialpha,terr)
+                        elapsed(tstart,palpha,fid(ialpha),terr)
                     end % alpha
                 else
                     % Multiplicative inflation values
@@ -121,41 +121,37 @@ for itf = 1:length(tFvec)
                             printcycle,loctype,locstr,locrad,parms,nature,...
                             climvar);
                         terr = tot_err(ialpha,:);
-                        elapsed(tstart,alpha,ialpha,terr)
+                        elapsed(tstart,alpha,fid(ialpha),terr)
                     end % alpha
                     % Plot time series of truth and ensemble mean
-                    if plotit
+                    if ring_movie
                         plot_ensmean_truth(outfolder,Xt,K,alpha,tF,R,...
-                            locrad,Ncycles,first,skip,myseed)                  
-                    end % if plotit
+                            locstr,locrad,Ncycles,first,skip,parms,myseed)
+                    end
                 end % myprocs > 0
             end % localization radii
         end % seeds
     end % ensemble sizes
 end % different time steps, NOT a time loop through Ncycles
-% if ~isempty(gcp('nocreate')),
-%     delete(gcp);
-% end
-finish = datestr(clock);
-fprintf('Started: %s, Finished %s\n',start,finish);
-disp([prompt',answer]);
 fclose('all');
+finish = datestr(clock);
+fprintf('Started: %s\nFinished: %s\n',start,finish);
 
 %% Parameter input
 function [Ncycles, first, skip, oberr, Kvec, ci, alphavec,...
           tFvec, fstr, seedlist, printcycle, loctype, locstr,...
-          locradlist, savestate, plotit] =...
+          locradlist, savestate, ring_movie] =...
           input_params
-    prompt={'Cycles','First var observed','Grid Skip','Time Skip',...
+    prompt={'Cycles','First var observed','Grid skip','Time skip',...
         'Ob error','Ensemble size(s)','Confidence level(s)','Prior inflation(s)',...
-        'Cycling interval(s0','Seed(s)','Cycles per print','Localization Type',...
-        'Localization radi(us,i)','Save state','Plot'};
+        'Cycling interval(s0','Seed(s)','Cycles per print','Localization type',...
+        'Localization radi(us,i)','Save state','Ring movie'};
     name='Filter Input';
     numlines=1;
     default={'1000','1','1','1',...
         '1.0','[500]','[0.95]','[1.64]',...
         '0.05','29418','100','none',...
-        '[10]','1','0'};
+        '[10]','1','1'};
     answer=inputdlg(prompt,name,numlines,default);i=1;
     % Number of cycles to run
     Ncycles = str2num(answer{i});i=i+1;
@@ -197,7 +193,7 @@ function [Ncycles, first, skip, oberr, Kvec, ci, alphavec,...
     % Localization radius (in gridpoints)
     locradlist = abs(round(str2num(answer{i})));i=i+1;
     savestate = logical(str2num(answer{i}));i=i+1;
-    plotit = logical(str2num(answer{i}));i=i+1;
+    ring_movie = logical(str2num(answer{i}));
     disp([prompt',answer]);
 end
 
@@ -279,17 +275,21 @@ function make_ensemble_dirs(Kvec, outfolder)
 end
 
 %% Plot time series of truth and ensemble mean
-function plot_ensmean_truth(outfolder,Xt,K,alpha,tF,R,...
-                            locrad,Ncycles,first,skip,myseed)
+
+    function plot_ensmean_truth(outfolder,Xt,K,alpha,tF,R,locstr,...
+                            locrad,Ncycles,first,skip,parms,myseed)
     myfilt = 'GKSQ';
+    Nx = size(Xt,1);
     posterior = [outfolder,'K',num2str(K,'%d\n'),'\',...
-        'posterior_alpha_',num2str(alpha,'%4.2f\n'),...
+        'posterior_alpha_',num2str(alpha,'%5.3f\n'),...
         '_tf_',num2str(tF,'%4.2f\n'),...
         '_R_',num2str(R(2,2),'%4.2f\n'),...
         '_loc_',locstr,num2str(locrad,'%d\n'),...
         '_nc_',num2str(Ncycles,'%d\n'),...
         '_1st_',num2str(first,'%d\n'),...
         '_skip_',num2str(skip,'%d\n'),...
+        '_Nx_',num2str(Nx,'%d\n'),...
+        '_Kp_',num2str(parms.K,'%d\n'),...
         '_seed_',num2str(myseed,'%d\n'),...
         '_',myfilt,'.mat'];
     Xa = load(posterior);
@@ -299,14 +299,23 @@ function plot_ensmean_truth(outfolder,Xt,K,alpha,tF,R,...
     plot(Xt(:,1),'k-');
     hold on; grid on;
     plot(mean(Xa(:,:,1),2),'r-');
+    ylim([-15,20]);
+    xlim([1,Nx]);
+    xtt = floor(Nx/16);
+    xticks([1 xtt:xtt:Nx]);
     legend('Truth','Ensmean');
     title(sprintf('%s time=1',myfilt));
-    for t=2:Ncycles
+    tskip = 4; % Plot once/day
+    for t=tskip+1:tskip:Ncycles
         pause(0.5);
         clf;
         plot(Xt(:,t),'k-');
         hold on; grid on;
         plot(mean(Xa(:,:,t),2),'r-');
+        ylim([-15,20]);
+        xlim([1,Nx]);
+        xtt = floor(Nx/16);
+        xticks([1 xtt:xtt:Nx]);
         legend('Truth','Ensmean');
         title(sprintf('%s time=%d',myfilt,t));
     end % for t=2:Ncycles
@@ -314,15 +323,14 @@ function plot_ensmean_truth(outfolder,Xt,K,alpha,tF,R,...
 end
 
 %% Timing and cleanup
-function elapsed(tstart,alpha,ialpha,terr)
+function elapsed(tstart,alpha,fid,terr)
+    fprintf('Alpha, tot_err =\n')
+    fprintf('%4.2f\t%8.6f\n',alpha,terr);
+    fprintf(fid,'%4.2f\t%8.6f\n',alpha,terr);
+    fclose(fid);
     tend=toc(tstart);
     thour=floor(tend/3600);
     tminute=floor((tend-thour*3600)/60);
     tsecond=round(mod(tend,60));
     fprintf('Elapsed time %0.2d:%0.2d:%0.2d\n',thour,tminute,tsecond);
-    fprintf('%4.2f\t%8.6f\t%8.6f\t%8.6f\t%8.6f\t%8.6f\n',...
-        alpha,terr);
-    fprintf(fid(ialpha),'%4.2f\t%8.6f\t%8.6f\t%8.6f\t%8.6f\t%8.6f\n',...
-        alpha,terr);
-    fclose(fid(ialpha));
 end
