@@ -155,8 +155,9 @@ if (savestate)    % Create filenames, and open files
     newpost  = [posterior,'_GKSQ'];
     save([newpost,'.mat'],'XKSQ','scoreKSQ','ensvarKSQ','-v7.3');
     parmfile = strrep(prior,'prior','trueparms');
+    newparmfile = [parmfile,'_GKSQ'];
     if ~isequal(parms,trueparms)
-        save([parmfile,'.mat'],'trueparms','-v7.3');
+        save([newparmfile,'.mat'],'parms','trueparms','-v7.3');
     end
     fprintf('took %5.3f seconds.\n',toc(tsave));
 end % if (savestate)
