@@ -10,7 +10,7 @@ if first==true
     ttl2=sprintf('(%4.1f%% Confidence Intervals)',100*ci);
     title({ttl1,ttl2});
     % One-sided is more appropriate for a squared quantity
-    cifac = abs(norminv((1-ci));
+    cifac = abs(norminv(1-ci));
     xlim([1 Ncycles]);
     ylim([0,Inf]);
     grid on
@@ -32,7 +32,7 @@ prior_lower = prior_mse_norm - cifac*prior_stderr;
 post_stderr = sqrt(post_varse_norm/Neff);
 post_upper = post_mse_norm + cifac*post_stderr;
 post_lower = post_mse_norm - cifac*post_stderr;
-da_spinup = 56;  % 2 weeks
+da_spinup = 400;
 figure(h);
 hold on
 if current_cycle >= da_spinup
