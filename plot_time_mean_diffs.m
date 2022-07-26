@@ -14,7 +14,7 @@ end
 increment = posterior - prior; % Nt x Nx
 [inc_time_mean, inc_time_std] =...
     mynanstats(increment); % Nt x Nx => 1 x Nx
-inc_rho = lagged_autocovariance(increment); % 1 x Nx
+inc_rho = lagged_autocovariance(increment); % Nt x Nx => 1 x Nx
 
 inc_ci_pct = 95; % 95% confidence interval
 [inc_lower, inc_upper] = ...
