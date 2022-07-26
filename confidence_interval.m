@@ -28,9 +28,12 @@ function [lower, upper, varargout] =...
    lower = tmean - cifac*stderr; % 1 x Nx
    upper = tmean + cifac*stderr; % 1 x Nx
    if nargout >= 3
-       varargout{1} = cifac;
+       varargout{1} = Neff;
    end
    if nargout >= 4
-       varargout{2} = stderr;
+       varargout{2} = cifac;
+   end
+   if nargout >= 5
+       varargout{3} = stderr;
    end
 end
