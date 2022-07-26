@@ -319,7 +319,6 @@ end
         legend('Truth','Ensmean');
         title(sprintf('%s time=%d',myfilt,t));
     end % for t=2:Ncycles
-    pause;
 end
 
 %% Timing and cleanup
