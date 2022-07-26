@@ -10,7 +10,8 @@ if first==true
     ttl2=sprintf('(%4.1f%% Confidence Intervals)',100*ci);
     title({ttl1,ttl2});
     cifac = abs(norminv((1-ci)/2));
-    set(gca,'xlim',[1 Ncycles]);
+    xlim([1 Ncycles]);
+    ylim([0,Inf]);
     grid on
 end
 
@@ -18,8 +19,10 @@ end
 % because of temporal autocovariance
 % For now, assume with a 6-hr DA cycle that the decorrelation length
 % scale is 2.5 days = 10 cycles. Later should formally compute the
-% lag-1 autocorrelation rho, then Neff = N * (1 - rho)/(1 + rho)
-factor = 1/10;
+% lag-1 autocorrelation rho, then Neff = N * factor, where
+% factor = (1 - rho)/(1 + rho)
+rho = 9/11;
+factor = (1 - rho) / (1 + rho);
 Neff = current_cycle * factor;
 % Now compute the standard error as the stdev / sqrt(Neff)
 % This is not quite correct either, as we are dealing with positive
@@ -39,6 +42,7 @@ if current_cycle >= da_spinup
 end
 plot(current_cycle,post_mse_norm,'b*',...
     current_cycle,post_upper,'r^',current_cycle,post_lower,'rv');
+ylim([0,Inf]);
 %line([current_cycle,current_cycle],[mse_norm+cifac*stderr,mse_norm-cifac*stderr]);
 if first==false
     times = [current_cycle-printcycle, current_cycle];
