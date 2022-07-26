@@ -1,5 +1,5 @@
-% This script reads in a posterior-prior pair, and computes and plots the
-% time mean of the difference as a ring plot
+% Ring plots of analysis minus background (posterior minus prior) and
+% analysis minus truth, with appropriate confidence intervals.
 % Bill Campbell Last modified 7/26/2022
 
 %% Nature run and DA output
@@ -83,64 +83,6 @@ function [Xt, Xb, Xa, trueparms] = get_run_info(da_spinup)
         Xt = Xt(da_spinup+1:end, :);
     end
     fprintf('Data read finished.\n')
-end
-
-%% Lagged autocovariance
-function rho = lagged_autocovariance(tseries, lag)
-    % Expect tseries to have Nt rows and 1 or more columns
-    if ~exist('lag','var')
-        lag = 1;
-    end
-    % Each column is a time series
-    Nt = size(tseries,1);
-    if Nt == 1
-        tseries = tseries.';
-        Nt = size(tseries,1);
-    end
-    if Nt < 2
-        fprintf('Time series must have at least 2 times, returning 0');
-        rho = zeros(size(tseries));
-        return
-    end
-    tplus = tseries(1+lag:end,:); % (Nt-lag) x Nx
-    [tplus_mean, tplus_std] = mynanstats(tplus); % 1 x Nx
-    tplus_prime = tplus - tplus_mean; % (Nt-lag) x Nx
-    tplus_pn = tplus_prime ./ tplus_std; % (Nt-lag) x Nx
-
-    tminus = tseries(1:end-lag,:); % (Nt-lag) x Nx
-    [tminus_mean, tminus_std] = mynanstats(tminus); % 1 x Nx
-    tminus_prime = tminus - tminus_mean; % (Nt-lag) x Nx
-    tminus_pn = tminus_prime ./ tminus_std; % (Nt-lag) x Nx
-    
-    rho = mean(tplus_pn.*tminus_pn); % 1 x Nx
-end
-
-%% Confidence interval accounting for autocorrelation
-function [lower, upper] =...
-    confidence_interval(Nt, tmean, tstd, trho, ci_pct)
-   if (~exist('ci_pct','var'))
-       ci_pct = 95; % 95 percent confidence interval
-   else
-       ci_pct = abs(ci_pct);
-       if ci_pct < 1.0
-           ci_pct = 100* ci_pct;
-       end
-       if ci_pct >= 100.0
-           fprintf('Confidence interval percent must be < 100%...'+...
-               'defaulting to 95%.\n');
-           ci_pct = 95;
-       end
-   end
-   Nx = size(tmean,2);
-   if (size(tstd,2) ~= Nx || size(trho,2) ~= Nx)
-       error('Mean, stddev, and rho all must have Nx columns, aborting...')
-   end
-   cifac = norminv(ci_pct/100.);
-   factor = (1 - trho) ./ (1 + trho); % 1 x Nx
-   Neff = Nt * factor; % 1 x Nx
-   stderr = tstd ./ sqrt(Neff); % 1 x Nx
-   lower = tmean - cifac*stderr; % 1 x Nx
-   upper = tmean + cifac*stderr; % 1 x Nx
 end
 
 %% Ring plot
