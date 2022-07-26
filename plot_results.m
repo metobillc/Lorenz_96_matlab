@@ -9,7 +9,8 @@ if first==true
         K,prior_mse_norm,post_mse_norm);
     ttl2=sprintf('(%4.1f%% Confidence Intervals)',100*ci);
     title({ttl1,ttl2});
-    cifac = abs(norminv((1-ci)/2));
+    % One-sided is more appropriate for a squared quantity
+    cifac = abs(norminv((1-ci));
     xlim([1 Ncycles]);
     ylim([0,Inf]);
     grid on
@@ -17,11 +18,9 @@ end
 
 % Need to compute effective N, which is less than current_cycle
 % because of temporal autocovariance
-% For now, assume with a 6-hr DA cycle that the decorrelation length
-% scale is 2.5 days = 10 cycles. Later should formally compute the
-% lag-1 autocorrelation rho, then Neff = N * factor, where
-% factor = (1 - rho)/(1 + rho)
-rho = 9/11;
+% Experimentally, the lag-1 autocovariance os the mean squared error
+% (analysis minus truth).^2 is ~ 0.40
+rho = 0.40;
 factor = (1 - rho) / (1 + rho);
 Neff = current_cycle * factor;
 % Now compute the standard error as the stdev / sqrt(Neff)
@@ -33,7 +32,7 @@ prior_lower = prior_mse_norm - cifac*prior_stderr;
 post_stderr = sqrt(post_varse_norm/Neff);
 post_upper = post_mse_norm + cifac*post_stderr;
 post_lower = post_mse_norm - cifac*post_stderr;
-da_spinup = 300;
+da_spinup = 56;  % 2 weeks
 figure(h);
 hold on
 if current_cycle >= da_spinup
