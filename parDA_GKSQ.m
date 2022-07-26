@@ -90,8 +90,10 @@ for ncycle = 1:Ncycles-1
     if ~mod(ncycle,printcycle) || ncycle==Ncycles-1
         % Compute mean value so far
         % Will want to add calculations for ensvar also?
-        [time_avg,time_stdev] = mynanstats(scoreKSQ(:,ncycle-printcycle+2:ncycle+1).'); % [2*Nx x 1,2* Nx x 1]
-        [time_vavg,~] = mynanstats(ensvarKSQ(:,ncycle-printcycle+2:ncycle+1).');
+        [time_avg,time_stdev] =...
+            mynanstats(scoreKSQ(:,ncycle-printcycle+2:ncycle+1).'); % 1 x 2*Nx
+        [time_vavg,~] =...
+            mynanstats(ensvarKSQ(:,ncycle-printcycle+2:ncycle+1).');
         if isscalar(time_stdev)
             time_stdev = repmat(time_stdev,1,2*Nx);
         end
