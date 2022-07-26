@@ -18,7 +18,8 @@ function [lower, upper] =...
    if (size(tstd,2) ~= Nx || size(trho,2) ~= Nx)
        error('Mean, stddev, and rho all must have Nx columns, aborting...')
    end
-   cifac = norminv(ci_pct/100.);
+   ci = ci_pct/100;
+   cifac = abs(norminv((1 - ci)/2));
    factor = (1 - trho) ./ (1 + trho); % 1 x Nx
    Neff = Nt * factor; % 1 x Nx
    stderr = tstd ./ sqrt(Neff); % 1 x Nx
