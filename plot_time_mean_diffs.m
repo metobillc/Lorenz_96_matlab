@@ -52,29 +52,38 @@ function [Xt, Xb, Xa, trueparms] = get_run_info(da_spinup)
     outfolder = 'C:\Users\campbell\Documents\MATLAB\Lorenz_96_model\'; % Local hard drive
     % Load truth, prior, derive posterior and parms names, load those
     [ftruth,tpath]=uigetfile([outfolder,'*L05*'],'Choose truth file:'); % truth trajectory
-    [fprior,ppath]=uigetfile([outfolder,'K*/prior*'],'Choose prior file:'); % prior
     truth = fullfile(tpath,ftruth);
-    fprintf('Loading truth...\n');
-    load(truth,'Xt');  % Ntfull x Nx
-    prior = fullfile(ppath,fprior);
-    fprintf('Loading prior...\n');
-    load(prior,'ZKSQ');
-    Xb = squeeze(mean(ZKSQ,2)).'; % Nt x Nx
-    [pri_time, pri_loc] = size(Xb);
-    posterior = strrep(prior,'prior','posterior');
-    fprintf('Loading posterior...\n');
-    load(posterior,'XKSQ');
-    Xa = squeeze(mean(XKSQ,2)).'; % Nt x Nx
-    [post_time, post_loc] = size(Xa);
-    if any([pri_time, pri_loc]) ~= any([post_time, post_loc])
-        error('Prior and posterior have incompatible sizes');
-    end
-    trueparmsname = strrep(prior,'prior','trueparms');
-    load(trueparmsname,'trueparms');
     % Also need nature run spinup
     string = strsplit(ftruth,'_');
     spinup = str2double(string{9}(7:end));
+    [fprior,ppath]=uigetfile([outfolder,'K*/prior*'],'Choose prior file:'); % prior
+    prior = fullfile(ppath,fprior);
+    posterior = strrep(prior,'prior','posterior');
+    tic;
+
+    fprintf('Loading prior...\n');
+    load(prior,'ZKSQ');
+    Xb = squeeze(mean(ZKSQ,2)).'; % Nt x Nx
+    clear ZKSQ
+    [pri_time, pri_loc] = size(Xb);
+
+    fprintf('Loading posterior...\n');
+    load(posterior,'XKSQ');
+    Xa = squeeze(mean(XKSQ,2)).'; % Nt x Nx
+    clear XKSQ
+    [post_time, post_loc] = size(Xa);
+
+    if any([pri_time, pri_loc]) ~= any([post_time, post_loc])
+        error('Prior and posterior have incompatible sizes');
+    end
+
+    fprintf('Loading truth...\n');
+    load(truth,'Xt');  % Ntfull x Nx
     Xt = Xt(spinup+1:spinup+post_time,:); % Nt x Nx
+
+    fprintf('Loading parameters...\n');
+    trueparmsname = strrep(prior,'prior','trueparms');
+    load(trueparmsname,'trueparms');
 
     % Delete DA spinup period unless it is too large
     if (da_spinup < pri_time)
@@ -82,7 +91,7 @@ function [Xt, Xb, Xa, trueparms] = get_run_info(da_spinup)
         Xa = Xa(da_spinup+1:end, :);
         Xt = Xt(da_spinup+1:end, :);
     end
-    fprintf('Data read finished.\n')
+    fprintf('Data read finished after %f seconds.\n',toc)
 end
 
 %% Ring plot
