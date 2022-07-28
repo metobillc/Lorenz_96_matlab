@@ -66,7 +66,7 @@ end
 if xtix(end) < Nx
     xtix = [xtix Nx];
 end
-set(gca,'xtick',xtix)
+set(gca,'xtick',xtix,'yscale','log')
 xlabel('Ring')
 title('Spread-Skill at Each Gridpoint')
 
@@ -78,7 +78,7 @@ plot(tt,SMSE,'r');
 hold on
 grid on
 plot(tt,smean_ensvar,'b')
-plot(space_spread_skill_ratio,'k')
+plot(tt,space_spread_skill_ratio,'k')
 legend('SMSE','Spread','Spread/SMSE','location','best')
 xlim([tt(1) tt(end)])
 ttix = xticks;
@@ -88,7 +88,7 @@ end
 if ttix(end) < da_spinup + Nt
     ttix = [ttix da_spinup + Nt];
 end
-set(gca,'xtick',ttix)
+set(gca,'xtick',ttix,'yscale','log')
 xlabel('Cycle')
 title('Spread-Skill at Each Timestep')
 
