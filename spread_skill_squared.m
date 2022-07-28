@@ -94,5 +94,7 @@ title('Spread-Skill at Each Timestep')
 
 
 %% Synchronize y-axes of the plots
+miny = min(ax1.YLim, ax2.YLim);
+maxy = max(ax1.YLim, ax2.YLim);
+ax1.YLim = [miny,maxy];
 linkaxes([ax1,ax2],'y')
-ax1.YLim = [0, max(ax1.YLim(2), ax2.YLim(2))];
