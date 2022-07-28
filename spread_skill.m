@@ -8,6 +8,14 @@ outfolder='C:\Users\knisely\Desktop\Lorenz_96\';
 [ftruth,ptruth]=uigetfile([outfolder,'*L05*'],'Truth');
 [fobs,pobs]=uigetfile([outfolder,'obs*'],'Obs');
 
+% Choose seed
+%prompt = "Enter file name ";
+%name='Out name';
+%numlines=1;
+%default={'Model#_#infl_F#_#loc'};
+%answer=inputdlg(prompt,name,numlines,default);
+%outname = answer{1};
+
 prior=load_ensemble(pprior,fprior);  
 [Nx,K,Nt]=size(prior);  % Space x Nmem x Time
 post=load_ensemble(ppost,fpost);
@@ -34,28 +42,32 @@ post_mean=squeeze(mean(post,2));
 post_min = squeeze(min(post,[],2));
 post_max = squeeze(max(post,[],2));
 
-%% RMSE, spread, and ratio calculations
+%% MSE, variance, and ratio calculations
+climnorm = 4.7820;
 
-RMSE = sqrt(mean(((obs-post_mean).^2),1));
-
-% RMS of post, post_mean
-%RMS_p = squeeze(sqrt(mean((bsxfun(@minus,post,mean(post,1))).^2,1)));
-%RMS_pm = sqrt(mean((bsxfun(@minus,post_mean,mean(post_mean,1))).^2,1));
-% Spread calc
-%spread = sqrt((K/(K-1))*mean((bsxfun(@plus,RMS_p,RMS_pm)).^2,1));
+MSE = mean(((post_mean-truth).^2),1);
+%display(mean(MSE./(climnorm.^2)))
 
 MSE_for = zeros(Nx,K,Nt);
 for t = 1:Nt
     MSE_for(:,:,t) = (bsxfun(@minus,post(:,:,t),post_mean(:,t))).^2;
 end
-spread = sqrt(mean(squeeze((K/(K-1)).*(mean(MSE_for,2))),1));
+meanvar = mean(squeeze((K/(K-1)).*(mean(MSE_for,2))),1);
 
-spr_sk = spread./RMSE;
-plot(RMSE,'r')
+spr_sk = meanvar./MSE;
+plot(MSE,'r')
+%hold on;
+%plot(MSE./(climnorm.^2),'r--')
 hold on;
-plot(spread,'b')
+plot(meanvar,'b')
 hold on;
 plot(spr_sk,'k')
-legend('RMSE','Spread','Spread/RMSE')
-ylim([0 2])
+hold on;
+plot(smoothdata(spr_sk,'gaussian',20),'k--')
+
+legend('MSE','Variance','Variance/MSE')
+ylim([0 inf])
 xlabel('Cycle')
+
+%saveas(gcf,[outfolder,'\figs\spread_skill_',outname,'.fig']);
+%saveas(gcf,[outfolder,'\figs\png\spread_skill_',outname,'.png']);
