@@ -35,7 +35,7 @@ for itf = 1:length(tFvec)
     parms.abstol = abstol;
     parms.reltol = reltol;
     y = load_obs(obspath,fobs);  % observations consistent with nature run
-    y = y(:,spinup+1:end); % must discard same spinup perio
+    y = y(:,spinup+1:end); % must discard same spinup period
     % Compute climatological covariance
     % Take time mean at each N point
     tru_t_ave = mean(Xt,2); % Nx x 1
