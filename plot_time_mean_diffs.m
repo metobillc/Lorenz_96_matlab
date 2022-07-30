@@ -6,7 +6,8 @@
 if ~exist('truth','var')
    da_spinup = 56; % 2 weeks
    % Return arguments are Nt x Nx
-   [truth, prior, posterior, trueparms] = get_run_info(da_spinup);
+   [truth, prior, posterior, trueparms, ppath, fprior] =...
+       get_run_info(da_spinup);
 end
 [Nt, Nx] = size(truth);
 
@@ -32,15 +33,24 @@ staterr_ci_pct = 95; % 95% confidence interval
     confidence_interval(Nt, staterr_time_mean, staterr_time_std,...
                         staterr_rho, staterr_ci_pct);
 
+%% Save stats
+fname = strrep(fprior,'prior','analinc');
+save([ppath,fname],...
+    'inc_time_mean','inc_time_std','inc_lower','inc_upper',...
+    'staterr_time_mean','staterr_time_std','staterr_lower','staterr_upper')
+
 %% Plots
 figname = 'Time_mean_increment_plot';
 plot_meandiff(inc_time_mean, inc_lower, inc_upper,...
      staterr_time_mean, staterr_lower, staterr_upper,...
      figname)
-
+figname = 'Increment_power';
+plot_power(inc_time_mean,figname)
+figname = 'Staterr_power';
+plot_power(staterr_time_mean,figname)
 
 %% Nature run, prior, posterior, parameters
-function [Xt, Xb, Xa, trueparms] = get_run_info(da_spinup)
+function [Xt, Xb, Xa, trueparms, ppath, fprior] = get_run_info(da_spinup)
     if (~exist('da_spinup','var'))
         da_spinup = 0;
     else
@@ -117,6 +127,26 @@ function plot_meandiff(tmean1,tlo1,tup1,tmean2,tlo2,tup2,figname)
     mt2 = mean(tmean2);
     text(-gap,mt2,sprintf('%5.3f',mt2),'color','r',...
          'fontsize',14,'fontweight','bold')
+    if exist('figname','var')
+        saveas(gcf,figname,'png');
+    end
+end
+
+%% Power spectrum plot
+function plot_power(tseries,figname)
+    figure('position',[100 200 1650 680]);
+    Nx = length(tseries);
+    power = abs(tseries(1:floor(Nx/2))).^2; % power of 1st half of data
+    maxfreq = 1/2;
+    freq = (1:Nx/2)/(Nx/2)*maxfreq;
+    period = 1./freq;
+    plot(period,power);
+    xlim([2 Nx/2])
+    set(gca,'xscale','log')
+    set(gca,'fontsize',12,'fontweight','bold')
+    grid on
+    xlabel('Period')
+    ylabel('Power')
     if exist('figname','var')
         saveas(gcf,figname,'png');
     end
