@@ -1,7 +1,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % draw_obs from true trajectory, with option
 % for a state-dependent bias and error of 
-% representation via a 5-point convolution
+% representation via spatial convolution
 % Bill Campbell
 % Last modified 7/29/2022
 
@@ -25,9 +25,9 @@ errlist=str2num(answer{i});i=i+1;
 rlist=(errlist.').*ones(size(oblist));
 % Obs bias factors
 biasfaclist=str2num(answer{i});i=i+1;
-% Error of representation 5-point convolution
-rep5 = str2num(answer{i});i=i+1;
-rep5n = rep5./sum(rep5);
+% Error of representation spatial convolution
+repr = str2num(answer{i});i=i+1;
+repr_norm = repr./sum(repr);
 % seed for random number generator
 seedlist = str2num(answer{i});i=i+1;
 % Plot option
@@ -69,8 +69,8 @@ for is=1:length(seedlist)
         % Create simulated obs with error covariance R and forward model H
         Rsqrt = chol(R, 'lower'); % R need not be diagonal
         yobs0 = H * Xt + Rsqrt * randn(Nobs,Ncycles);
-        % Error of representation
-        yobs0 = conv2(rep5, 1, yobs0, 'same');
+        % Error of representation via spatial convolution
+        yobs0 = conv2(repr_norm, 1, yobs0, 'same');
         for ibf=1:length(biasfaclist)
             bias_factor = biasfaclist(ibf);
             yobs = bias_factor.*yobs0;
@@ -88,18 +88,18 @@ for is=1:length(seedlist)
                 '_tseed',num2str(tseed,'%d\n'),...
                 '_oseed',num2str(seed,'%d\n'),...
                 '_biasfac',num2str(bias_factor,'%5.3f\n'),...
-                '_rep',num2str(rep5,'%1d'),...
+                '_rep',num2str(repr,'%1d'),...
                 '.mat'];
             save(fobs,'yobs','oblist','abstol','reltol');
             if plotit
-                plot_obs(mask, Ncycles, Xt, yobs, N, bias_factor, rep5);
+                plot_obs(mask, Ncycles, Xt, yobs, N, bias_factor, repr);
             end
         end
     end
 end
 toc
 
-function plot_obs(mask, Ncycles, Xt, yobs, N, bias_factor, rep5)
+function plot_obs(mask, Ncycles, Xt, yobs, N, bias_factor, repr)
     % plotting the states versus time should be your first check to see if the
     % result seems reasonable
     figure;
@@ -118,7 +118,7 @@ function plot_obs(mask, Ncycles, Xt, yobs, N, bias_factor, rep5)
     xlabel('Time [s]')
     ylim([-10 20])
     ttl1=sprintf('Time series at node %d',node);
-    repstr=strrep(num2str(rep5,'%1d'),' ','');
+    repstr=strrep(num2str(repr,'%1d'),' ','');
     ttl2=sprintf('Bias factor %5.2f, Rep5 [%s]',bias_factor,repstr);
     title({ttl1,ttl2})
     subplot(212)
