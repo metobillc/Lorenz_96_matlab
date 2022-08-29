@@ -1,4 +1,4 @@
-function [Xa,score,ensvar] = KSQ(Zfull,alpha,K,H,R,y,Xt,varargin)
+function [Xa,score,ensvar,varargout] = KSQ(Zfull,alpha,K,H,R,y,Xt,varargin)
 % Liz Satterfield 10/24/2019
 % Add localization (new parameter)
 % Return prior and posterior error variances along with squared errors
@@ -21,7 +21,7 @@ Pf=Zf*Zf'; %Nx x Nx
 %update ensemble
 A=Htilde*Zf; 
 % K x K
-[C Gamma]=eig(A'*A);
+[C, Gamma]=eig(A'*A);
 T = C*sqrt(pinv(Gamma + eye(K)));
 Pa=(Zf*T)*(Zf*T)';
 Za=Zf*T*C';
@@ -31,18 +31,28 @@ Xa=Za*sqrt(K-1);
 %traditional KF update
 %xa_bar=xb_bar+Pf*H'*inv(H*(Pf)*H'+R)*(y-yb_bar);
 %traditional KF update with localization
-xa_bar=xb_bar+(CL.*Pf)*H'*inv(H*(CL.*Pf)*H'+R)*(y-yb_bar);
+Pfloc = CL.*Pf;
+repr = H*Pfloc*H' + R;
+W = repr \ (y-yb_bar); % More stable than inv(repr)*(y-yb_bar)
+xa_bar = xb_bar + (Pfloc*H')*W;
 %ETKF update xa_bar=xb_bar+Pa*H'*Rinv*(y-yb_bar)
 % xa_bar=xb_bar+Zf*C*pinv(Gamma+eye(K))*C'*Zf'*Htilde'*Rsqinv*(y-yb_bar);
 
 % Recenter Analysis ensemble
 Xa = Xa + repmat(xa_bar,1,K); % Nx x K
 
-%% MSE (score) of prior and posterior means
-priscore = (xb_bar - Xt).^2; % Nx x 1
-postscore = (xa_bar - Xt).^2; % Nx x 1
+%% MSE (score) of prior and posterior ensemble means
+prierr = xb_bar - Xt;
+priscore = prierr.^2; % Nx x 1
+posterr = xa_bar - Xt;
+postscore = posterr.^2; % Nx x 1
 score = [priscore; postscore]; % 2*Nx x 1
+err = [prierr; posterr];
+if nargout==4
+    varargout{1} = err;
+end
 
+%% Prior and posterior ensemble variances
 privar = diag(Pf);
 postvar = diag(Pa);
 ensvar = [privar; postvar]; % 2*Nx x 1
