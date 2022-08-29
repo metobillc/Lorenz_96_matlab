@@ -11,6 +11,7 @@ fprintf('Loading posterior...\n');
 load(posterior,'ensvarKSQ','scoreKSQ','errKSQ');
 if exist('errKSQ','var')
     use_errKSQ = 1;
+    scoreKSQ = errKSQ.^2;
 else
     fprintf('Older code did not save errKSQ, so cannot plot it.\n');
     use_errKSQ = 0;
@@ -29,8 +30,6 @@ if use_errKSQ==1
     tvar = stdev.^2;
     % We want to plot the time mean squared error at each spatial point, tmse
     tmse = rmse.^2; % equals tbiassq + tvar
-    % These should already be equal, butprefer to use errKSQ.^2
-    scoreKSQ = errKSQ.^2;
 else
     % scoreKSQ already IS the squared error, so we just need its mean
     % We cannot assess the components of squared bias and variance that
