@@ -158,7 +158,7 @@ if (savestate)    % Create filenames, and open files
     save([newprior,'.mat'],'ZKSQ','-v7.3');
     posterior = strrep(prior,'prior','posterior');
     newpost  = [posterior,'_GKSQ'];
-    % Saving errKSQ instead of scoreKSQ
+    % Saving errKSQ in addition to scoreKSQ
     save([newpost,'.mat'],'XKSQ','errKSQ','ensvarKSQ','-v7.3');
     parmfile = strrep(prior,'prior','trueparms');
     newparmfile = [parmfile,'_GKSQ'];
