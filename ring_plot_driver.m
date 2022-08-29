@@ -1,30 +1,8 @@
 % This script loads posterior .mat files, then calls 
 % plot_mse_ring.m to produce a ring plots of prior & posterior
-% MSE and variance on the ring.
-clearvars -except Xt y
-
-%% Import truth, obs
-% Change these
-outfolder = 'C:\Users\campbell\Document\MATLAB\\Lorenz_96\'; % Local hard drive
-
-% Load nature run and observations
-if ~exist('Xt','var') || ~exist('y','var')
-    [ftruth, truepath, fobs, obspath, spinup] =...
-    get_nature_run_info(outfolder);
-    [Xt,~,~] = load_truth(truepath,ftruth); % full nature run
-    Xt = Xt(:,spinup+1:end); % discard nature run spinup
-    y = load_obs(obspath,fobs);  % observations consistent with nature run
-    y = y(:,spinup+1:end); % must discard same spinup period
-end
-
-tru_t_ave = mean(Xt,2); % Nx x 1
-mean_diff = (bsxfun(@minus,y,tru_t_ave)).^2;  % Nx x Ncycles
-climvar = mean(mean_diff,'all'); % scalar
-fprintf('Climatoligical error variance is %8.6f\n',climvar);
-Nx = size(tru_t_ave,1);
 
 %% Load posterior, discarding da_spinup
-% Load post
+outfolder = 'C:\Users\campbell\Document\MATLAB\\Lorenz_96\'; % Local hard drive
 [fpost,ppath]=uigetfile([outfolder,'K*/posterior*'],'Choose post file:'); % post
 posterior = fullfile(ppath,fpost);
 fprintf('Loading posterior...\n');
@@ -187,3 +165,4 @@ function plot_ensvar_ring(ensvar, upper)
         mean(ensvar(post)));
     title({ttl1})
 end
+
