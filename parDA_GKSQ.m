@@ -47,6 +47,7 @@ XKSQ = zeros(Nx,K,Ncycles);
 XKSQ(:,:,1) = XX;
 scoreKSQ = zeros(Nx*2,Ncycles);
 ensvarKSQ = scoreKSQ;
+errKSQ = scoreKSQ;
 
 fprintf('Cycle = 1 of %d: K=%d,tF=%4.2f,alpha=%5.3f,seed=%d\n',...
     Ncycles,K,tF,alpha,myseed);
@@ -79,7 +80,9 @@ for ncycle = 1:Ncycles-1
     % function [Xa,score,ensvar] = KSQ(Zfull,alpha,K,H,R,y,Xt,varargin)
 
     if ~mod(ncycle,nskip) % Do DA every nskip time steps
-        [XX,scoreKSQ(1:2*Nx,ncycle+1),ensvarKSQ(1:2*Nx,ncycle+1)] = ...
+        [XX,scoreKSQ(1:2*Nx,ncycle+1),...
+            ensvarKSQ(1:2*Nx,ncycle+1),...
+            errKSQ(1:2*Nx,ncycle+1)] = ...
             KSQ(ZZ,alpha,K,H,R,y(:,ncycle+1),Xt(:,ncycle+1),CL);
     else
         XX = ZZ; % No DA, set posterior equal to prior
@@ -155,7 +158,8 @@ if (savestate)    % Create filenames, and open files
     save([newprior,'.mat'],'ZKSQ','-v7.3');
     posterior = strrep(prior,'prior','posterior');
     newpost  = [posterior,'_GKSQ'];
-    save([newpost,'.mat'],'XKSQ','scoreKSQ','ensvarKSQ','-v7.3');
+    % Saving errKSQ instead of scoreKSQ
+    save([newpost,'.mat'],'XKSQ','errKSQ','ensvarKSQ','-v7.3');
     parmfile = strrep(prior,'prior','trueparms');
     newparmfile = [parmfile,'_GKSQ'];
     if ~isequal(parms,trueparms)
