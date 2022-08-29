@@ -29,7 +29,7 @@ if nargin<2, flag = 0; end
 if isempty(x) % Check for empty input.
     avg = NaN;
     stdev = NaN;
-    if (nargout==3),
+    if (nargout==3)
         varargout{1}=NaN;
     end
     return
@@ -37,7 +37,7 @@ end
 
 [rows,cols] = size(x);
 
-if rows==1,	% Only take mean if a COLUMN vector
+if rows==1	% Only take mean if a COLUMN vector
   avg = x;
   stdev = 0;
   return
@@ -52,7 +52,7 @@ avg = nanmean(x);
 %avg = mynanmean(x);
 
 count = rows-sum(nans);
-if cols==1,
+if cols==1
    x = x - avg;
 else
    x = x - avg(ones(rows,1),:);
@@ -70,6 +70,6 @@ else
    stdev = sqrt(sum(x.*x)./max(count-1,1));
 end
 stdev(i) = i + NaN;
-if (nargout==3),
+if nargout==3
     varargout{1} = sqrt(avg.^2+stdev.^2);
 end
