@@ -1,8 +1,8 @@
-function [tot_err,tot_avar,varargout] = parDA_GKSQ(XIC,Xt,y,outfolder,H,R,...
-         g1st,skip,tF,ci,alpha,K,myseed,fstr,savestate,...
-         printcycle,loctype,locstr,locrad,parms,trueparms,climvar)
+function [tot_err,tot_avar,varargout] = parDA_GKSQ(XIC,Xt,y,outfolder,...
+          H,R,g1st,skip,tF,ci,alpha,K,myseed,fstr,savestate,printcycle,...
+          loctype,locstr,locrad,parms,trueparms,obs_parms,climvar)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Bill Campbell Last Modified 6/16/2022
+% Bill Campbell Last Modified 9/4/2022
 % Global-solve Kalman Square Root filter
 % Added covariance localization
 % Added ensemble variance for comparison with squared error
@@ -158,13 +158,11 @@ if (savestate)    % Create filenames, and open files
     save([newprior,'.mat'],'ZKSQ','-v7.3');
     posterior = strrep(prior,'prior','posterior');
     newpost  = [posterior,'_GKSQ'];
-    % Saving errKSQ innstead to scoreKSQ
+    % Saving errKSQ instead of scoreKSQ
     save([newpost,'.mat'],'XKSQ','errKSQ','ensvarKSQ','-v7.3');
     parmfile = strrep(prior,'prior','trueparms');
     newparmfile = [parmfile,'_GKSQ'];
-    if ~isequal(parms,trueparms)
-        save([newparmfile,'.mat'],'parms','trueparms','-v7.3');
-    end
+    save([newparmfile,'.mat'],'parms','trueparms','obs_parms','-v7.3');
     fprintf('took %5.3f seconds.\n',toc(tsave));
 end % if (savestate)
 

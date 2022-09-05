@@ -3,11 +3,12 @@
 % Using Lorenz 96 Model I, II or III
 % Global Kalman Square Root filter
 % Bill Campbell
-% Last modified 7/21/2022
+% Last modified 9/4/2022
 
 %% Parameter input
-[Ncycles, first, skip, oberr, Kvec, ci, alphavec, tFvec, fstr, seedlist,...
- printcycle, loctype, locstr, locradlist, savestate, ring_movie] =...
+[Ncycles, first, skip, obs_parms, Kvec, ci, alphavec,...
+    tFvec, fstr, seedlist, printcycle, loctype, locstr, locradlist,...
+    savestate, ring_movie] =...
 input_params;
 
 %% Nature run and observations of the truth
@@ -36,6 +37,7 @@ for itf = 1:length(tFvec)
     parms.reltol = reltol;
     y = load_obs(obspath,fobs);  % observations consistent with nature run
     y = y(:,spinup+1:end); % must discard same spinup period
+    y = apply_obs_bias(obs_parms,y); % Multiplicative and additive obs biases
     % Compute climatological covariance
     % Take time mean at each N point
     tru_t_ave = mean(Xt,2); % Nx x 1
@@ -61,7 +63,7 @@ for itf = 1:length(tFvec)
     % Observed gridpoints
     gmask = first:skip:Nx;
     oblist(gmask)=1;
-    rlist(gmask)=oberr;
+    rlist(gmask)=obs_parms.oberr;
     % Set up observation operator and ob error covariance matrix
     % H will be Nobs x Nx, R will be Nobs x Nobs, Nobs <= Nx
     [~,H,R] = forward(oblist,rlist);
@@ -102,7 +104,7 @@ for itf = 1:length(tFvec)
                             parDA_GKSQ(XIC,Xt,y,outfolder,H,R,...
                             first,skip,tF,ci,palpha,K,myseed,fstr,savestate,...
                             printcycle,loctype,locstr,locrad,parms,nature,...
-                            climvar);
+                            obs_parms,climvar);
                         terr = tot_err(ialpha,:);
                         elapsed(tstart,palpha,fid(ialpha),terr)
                     end % alpha
@@ -119,7 +121,7 @@ for itf = 1:length(tFvec)
                             parDA_GKSQ(XIC,Xt,y,outfolder,H,R,...
                             first,skip,tF,ci,alpha,K,myseed,fstr,savestate,...
                             printcycle,loctype,locstr,locrad,parms,nature,...
-                            climvar);
+                            obs_parms,climvar);
                         terr = tot_err(ialpha,:);
                         elapsed(tstart,alpha,fid(ialpha),terr)
                     end % alpha
@@ -137,19 +139,22 @@ fclose('all');
 finish = datestr(clock);
 fprintf('Started: %s\nFinished: %s\n',start,finish);
 
+
 %% Parameter input
-function [Ncycles, first, skip, oberr, Kvec, ci, alphavec,...
-          tFvec, fstr, seedlist, printcycle, loctype, locstr,...
+function [Ncycles, first, skip, obs_parms, Kvec, ci,...
+          alphavec, tFvec, fstr, seedlist, printcycle, loctype, locstr,...
           locradlist, savestate, ring_movie] =...
           input_params
     prompt={'Cycles','First var observed','Grid skip','Time skip',...
-        'Ob error','Ensemble size(s)','Confidence level(s)','Prior inflation(s)',...
-        'Cycling interval(s0','Seed(s)','Cycles per print','Localization type',...
-        'Localization radi(us,i)','Save state','Ring movie'};
+        'Ob error','Ob bias','Ob bias factor','Ensemble size(s)',...
+        'Confidence level(s)','Prior inflation(s)',...
+        'Cycling interval(s)','Seed(s)','Cycles per print',...
+        'Localization type','Localization radi(us,i)','Save state',...
+        'Ring movie'};
     name='Filter Input';
     numlines=1;
     default={'1000','1','1','1',...
-        '1.0','[500]','[0.95]','[1.64]',...
+        '1.0','0.0','1.0','[500]','[0.95]','[1.64]',...
         '0.05','29418','100','none',...
         '[10]','1','1'};
     answer=inputdlg(prompt,name,numlines,default);i=1;
@@ -161,8 +166,12 @@ function [Ncycles, first, skip, oberr, Kvec, ci, alphavec,...
     skip = str2num(answer{i});i=i+1;
     % Time steps skipped (completely unobserved)
     tskip = str2num(answer{i});i=i+1;
+    % observation additive bias
+    obs_parms.obbias = str2num(answer{i});i=i+1;
+    % observation multiplicate bias factor
+    obs_parms.obsbiasfac = str2num(answer{i});i=i+1;
     % observation error variance
-    oberr = str2num(answer{i});i=i+1;
+    obs_parms.oberr = str2num(answer{i});i=i+1;
     % number of ensemble members --- 32, 64, 128, 256, 512, 1024
     Kvec = str2num(answer{i});i=i+1;
     % Confidence level (0.95 is typical)
@@ -319,6 +328,12 @@ end
         legend('Truth','Ensmean');
         title(sprintf('%s time=%d',myfilt,t));
     end % for t=2:Ncycles
+end
+
+%% Observation biases
+function y = apply_obs_bias(obs_parms,y)
+   % Multiplicative and additive obs biases
+   y = y.*obs_parms.obbiasfac + obs_parms.obbias;
 end
 
 %% Timing and cleanup
