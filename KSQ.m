@@ -2,41 +2,49 @@ function [Xa,score,ensvar,varargout] = KSQ(Zfull,alpha,K,H,R,y,Xt,varargin)
 % Liz Satterfield 10/24/2019
 % Add localization (new parameter)
 % Return prior and posterior error variances along with squared errors
+% Model and obs bias correction by Bill Campbell 9/4/2022
 %% Ensemble Transform Kalman Filter
 
-
-%% Localization (new section)
 xb_bar = mean(Zfull,2); % Nx x 1
-Xb=sqrt(alpha)*(Zfull - repmat(xb_bar,1,K)); % Nx x K
-Nx=length(xb_bar);
-Rinv=R^(-1); %Nobs x Nobs
-Rsqinv = diag(1./sqrt(diag(R))); % Nobs x Nobs
-Htilde=Rsqinv*H; %Nobs x Nobs
-CL = varargin{1};
-Yb=H*Xb; %Nobs x K
-yb_bar=H*xb_bar; %Nobs x 1
-Zf=Xb/sqrt(K-1); %Nx x K
-Pf=Zf*Zf'; %Nx x Nx
+Xb = sqrt(alpha).*(Zfull - repmat(xb_bar,1,K)); % Nx x K
 
-%update ensemble
-A=Htilde*Zf; 
+%% Model and obs bias correction
+% Apply model bias correction only to the simulated obs,
+% NOT to the background itself, i.e. leave xb_bar unchanged
+xb_bar_bc = apply_model_bias_correction_to_obs(xb_bar);
+yb_bar  = H * xb_bar_bc; % Nobs x 1
+% Apply obs bias correction directly to obs
+y = apply_obs_bias_correction(y);
+
+%% Create and update ensemble
+skm1 = sqrt(K-1);
+Zf = Xb ./ skm1; % Nx x K
+Pf = Zf * Zf.'; % Nx x Nx
+
+% Only handles diagonal R for now
+Rsqinv = diag(1./sqrt(diag(R))); % Nobs x Nobs
+Htilde = Rsqinv * H; % Nobs x Nobs
+A = Htilde * Zf;
 % K x K
-[C, Gamma]=eig(A'*A);
-T = C*sqrt(pinv(Gamma + eye(K)));
-Pa=(Zf*T)*(Zf*T)';
-Za=Zf*T*C';
-Xa=Za*sqrt(K-1);
+[C, Gamma] = eig(A.' * A);
+T = C * sqrt(pinv(Gamma + eye(K)));
+zft = Zf * T;
+Pa = zft * zft.';
+Za = zft * C.';
+Xa = Za .* skm1;
 
 %update mean
 %traditional KF update
 %xa_bar=xb_bar+Pf*H'*inv(H*(Pf)*H'+R)*(y-yb_bar);
 %traditional KF update with localization
-Pfloc = CL.*Pf;
-repr = H*Pfloc*H' + R;
-W = repr \ (y-yb_bar); % More stable than inv(repr)*(y-yb_bar)
-xa_bar = xb_bar + (Pfloc*H')*W;
-%ETKF update xa_bar=xb_bar+Pa*H'*Rinv*(y-yb_bar)
-% xa_bar=xb_bar+Zf*C*pinv(Gamma+eye(K))*C'*Zf'*Htilde'*Rsqinv*(y-yb_bar);
+CL = varargin{1};
+Pfloc = CL .* Pf;
+PflocHt = Pfloc * H.';
+repr = H*PflocHt + R;
+W = repr \ (y - yb_bar); % More stable than inv(repr)*(y - yb_bar)
+xa_bar = xb_bar + PflocHt * W;
+%ETKF update xa_bar=xb_bar+Pa*H'*Rinv*(y - yb_bar)
+% xa_bar=xb_bar+Zf*C*pinv(Gamma+eye(K))*C'*Zf'*Htilde'*Rsqinv*(y - yb_bar);
 
 % Recenter Analysis ensemble
 Xa = Xa + repmat(xa_bar,1,K); % Nx x K
@@ -56,30 +64,19 @@ end
 privar = diag(Pf);
 postvar = diag(Pa);
 ensvar = [privar; postvar]; % 2*Nx x 1
-% 
-% mean(var(Xa'))
-% mean(privar)
-% mean(priscore)
-% mean(postvar)
-% mean(postscore)
+end
 
-%%%%%%%%%%%%%plotting
-% figure(1);
-% obs_plot=sum(H);
-% ix=find(obs_plot==1);
-% ih=find(obs_plot==0);
-% if ~isempty(ih)
-%     obs_plot(ih)=nan
-% end
-% obs_plot(ix)=y;
-% h=plot(Xt(:),'k-');
-% set(h,'LineWidth',2)
-% hold on
-% axis([1 Nx -20 20]);
-% for j=1:K
-%     plot(Xa(:,j),'b--');
-% end
-% plot(obs_plot,'r*');
-% hold off
-% pause(0.01)
+function xb_bar_bc = apply_model_bias_correction_to_obs(xb_bar)
+    % Can e.g. add long-term mean of analysis minus background here
+    anal_minus_bk = 0.0; % Instead read from a file
+    % Add to background the mean of A-B from previous model bias run with
+    % perfect(i.e. unbiased) obs and no bias correction
+    xb_bar_bc = xb_bar + anal_minus_bk;
+end
+
+function y_bc = apply_obs_bias_correction(y)
+    obs_minus_bk = 0.0; % Instead read from file
+    % Subtract from ob the mean of O-B from previous obs bias run with
+    % perfect(i.e. identical model params e.g. forcing) model and no bias correction 
+    y_bc = y - obs_minus_bk;
 end
