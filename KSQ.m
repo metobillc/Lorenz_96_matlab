@@ -3,18 +3,36 @@ function [Xa,score,ensvar,varargout] = KSQ(Zfull,alpha,K,H,R,y,Xt,varargin)
 % Add localization (new parameter)
 % Return prior and posterior error variances along with squared errors
 % Model and obs bias correction by Bill Campbell 9/4/2022
+
+if (nargin > 7)
+    CL = varargin{1};
+end
+if (nargin == 8)
+    obs_parms = varargin{2};
+    bc_obs = obs_parms.bc_obs;
+    bc_simobs = obs_parms.bc_simobs;
+else
+    bc_obs = 0;
+    bc_simobs = 0;
+end
 %% Ensemble Transform Kalman Filter
 
 xb_bar = mean(Zfull,2); % Nx x 1
 Xb = sqrt(alpha).*(Zfull - repmat(xb_bar,1,K)); % Nx x K
 
 %% Model and obs bias correction
-% Apply model bias correction only to the simulated obs,
+% Apply "model bias" correction only to the simulated obs,
 % NOT to the background itself, i.e. leave xb_bar unchanged
-xb_bar_bc = apply_model_bias_correction_to_obs(xb_bar);
-yb_bar  = H * xb_bar_bc; % Nobs x 1
+if (bc_simobs == 1)
+   xb_bar_bc = apply_model_bias_correction_to_obs(xb_bar);
+   yb_bar  = H * xb_bar_bc; % Nobs x 1
+else
+    yb_bar = H * xb_bar; % Nobs x 1
+end
 % Apply obs bias correction directly to obs
-y = apply_obs_bias_correction(y);
+if (bc_obs == 1) 
+    y = apply_obs_bias_correction(y);
+end
 
 %% Create and update ensemble
 skm1 = sqrt(K-1);
@@ -37,7 +55,6 @@ Xa = Za .* skm1;
 %traditional KF update
 %xa_bar=xb_bar+Pf*H'*inv(H*(Pf)*H'+R)*(y-yb_bar);
 %traditional KF update with localization
-CL = varargin{1};
 Pfloc = CL .* Pf;
 PflocHt = Pfloc * H.';
 repr = H*PflocHt + R;
