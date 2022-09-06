@@ -168,12 +168,12 @@ function [Ncycles, first, skip, obs_parms, Kvec, ci,...
     skip = str2num(answer{i});i=i+1;
     % Time steps skipped (completely unobserved)
     tskip = str2num(answer{i});i=i+1;
+    % observation error variance
+    obs_parms.oberr = str2num(answer{i});i=i+1;
     % observation additive bias
     obs_parms.obbias = str2num(answer{i});i=i+1;
     % observation multiplicative bias factor
-    obs_parms.obsbiasfac = str2num(answer{i});i=i+1;
-    % observation error variance
-    obs_parms.oberr = str2num(answer{i});i=i+1;
+    obs_parms.obbiasfac = str2num(answer{i});i=i+1;
     % apply bias correction to obs
     obs_parms.bc_obs = str2num(answer{i});i=i+1;
     % apply bias correction to simulated obs
