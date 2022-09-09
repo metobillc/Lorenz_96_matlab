@@ -11,6 +11,16 @@
     savestate, ring_movie] =...
 input_params;
 
+%% Bias corrections
+% Load bias corrections for simulated obs
+if (obs_parms.bc_simobs==1)
+    obs_parms.AmB = load_simobs_bias_correction();
+end
+% Load bias corrections for obs
+if (obs_parms.bc_obs==1)
+    obs_parms.OmB = load_obs_bias_correction();
+end
+
 %% Nature run and observations of the truth
 [outfolder, ftruth, truepath, fobs, obspath, nature, spinup] =...
 get_nature_run_info;
@@ -236,6 +246,21 @@ function [outfolder, ftruth, truepath, fobs, obspath, nature, spinup] =...
     nature.c = str2double(string{7}(2:end));
     % Also need nature run spinup
     spinup = str2double(string{9}(7:end));
+end
+
+%% Bias correction for simulated obs
+function AmB = load_simobs_bias_correction()
+    % Can e.g. add long-term mean of analysis minus background here
+    [fn,pn,~] = uigetfile('K*/diffstat*','Grab A-B');
+    load([pn,fn],'AmB');
+end
+
+%% Bias correction for obs
+function OmB = load_obs_bias_correction()
+    % Subtract from ob the mean of O-B from previous obs bias run with
+    % perfect(i.e. identical model params e.g. forcing) model and no bias correction
+    [fn,pn,~] = uigetfile('K*/diffstat*','Grab O-B');
+    load([pn,fn],'OmB');
 end
 
 %% Parameter adjustment

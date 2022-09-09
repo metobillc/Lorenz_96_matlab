@@ -138,6 +138,13 @@ tot_var = sum(stdev(Nx+1:2*Nx).^2);
 tot_avar = sum(avar(Nx+1:2*Nx));
 tot_vvar = sum(vstdev(Nx+1:2*Nx).^2);
 display_results(fstr,aerr,avar);
+% Time mean ensemble means of differences
+[AmB,OmB,OmA,AmT,BmT,OmT] = diff_stats(XKSQ,ZKSQ,y,Xt,spinup);
+% Print spatial means
+fprintf('Mean A-B is %d, mean O-B is %d, mean O-A is %d after %d-cycle spinup\n',...
+    mean(AmB), mean(OmB), mean(OmA), spinup);
+fprintf('Mean A-T is %d, mean B-T is %d, mean O-T is %d after %d-cycle spinup\n',...
+    mean(AmT), mean(BmT), mean(OmT), spinup);
 
 % Save states in .mat files
 if (savestate)    % Create filenames, and open files
@@ -154,15 +161,25 @@ if (savestate)    % Create filenames, and open files
         '_Nx_',num2str(Nx,'%d\n'),...
         '_Kp_',num2str(parms.K,'%d\n'),...
         '_seed_',num2str(myseed,'%d\n')];
-    newprior = [prior,'_GKSQ'];
+    suffix='';
+    if isfield(obs_parms, 'bc_obs') && isfield(obs_parms, 'bc_simobs')
+        if (obs_parms.bc_obs~=0 || obs_parms.bc_simobs ~= 0)
+            suffix = sprintf('_obs_bc_%1d_simobs_bc_%1d', ...
+                obs_parms.bc_obs, obs_parms.bc_simobs);
+        end
+    end
+    newprior = [prior,'_GKSQ',suffix];
     save([newprior,'.mat'],'ZKSQ','-v7.3');
     posterior = strrep(prior,'prior','posterior');
-    newpost  = [posterior,'_GKSQ'];
+    newpost  = [posterior,'_GKSQ',suffix];
     % Saving errKSQ instead of scoreKSQ
     save([newpost,'.mat'],'XKSQ','errKSQ','ensvarKSQ','-v7.3');
     parmfile = strrep(prior,'prior','trueparms');
-    newparmfile = [parmfile,'_GKSQ'];
+    newparmfile = [parmfile,'_GKSQ',suffix];
     save([newparmfile,'.mat'],'parms','trueparms','obs_parms','-v7.3');
+    statsfile = strrep(prior,'prior','diffstats');
+    newstatsfile = [statsfile,'_GKSQ',suffix];
+    save([newstatsfile,'.mat'],'AmB','OmB','OmA','AmT','BmT','OmT','-v7.3');
     fprintf('took %5.3f seconds.\n',toc(tsave));
 end % if (savestate)
 
@@ -177,19 +194,20 @@ end
 end
 
 function display_results(tstr,aerr,varargin)
-Nx=length(aerr)/2;
-nmid = floor(Nx/2);
-fprintf('%s: Prior squared error %s = %s + %s + ... + %s + %s + ...\n',...
-    tstr,num2str(sum(aerr(1:Nx))),num2str(aerr(1)),num2str(aerr(2)),num2str(aerr(nmid)),num2str(aerr(nmid+1)));
-if nargin==3
-    avar = varargin{1};
-    fprintf('%s: Prior error variance %s = %s + %s + ... + %s + %s + ...\n',...
-        tstr,num2str(sum(avar(1:Nx))),num2str(avar(1)),num2str(avar(2)),num2str(avar(nmid)),num2str(avar(nmid+1)));
+    Nx=length(aerr)/2;
+    nmid = floor(Nx/2);
+    fprintf('%s: Prior squared error %s = %s + %s + ... + %s + %s + ...\n',...
+        tstr,num2str(sum(aerr(1:Nx))),num2str(aerr(1)),num2str(aerr(2)),num2str(aerr(nmid)),num2str(aerr(nmid+1)));
+    if nargin==3
+        avar = varargin{1};
+        fprintf('%s: Prior error variance %s = %s + %s + ... + %s + %s + ...\n',...
+            tstr,num2str(sum(avar(1:Nx))),num2str(avar(1)),num2str(avar(2)),num2str(avar(nmid)),num2str(avar(nmid+1)));
+    end
+    fprintf('%s: Posterior squared error %s = %s + %s + ... + %s + %s + ...\n',...
+        tstr,num2str(sum(aerr(Nx+1:2*Nx))),num2str(aerr(Nx+1)),num2str(aerr(Nx+2)),num2str(aerr(Nx+nmid)),num2str(aerr(Nx+nmid+1)));
+    if nargin==3
+        fprintf('%s: Posterior error variance %s = %s + %s + ... + %s + %s + ...\n',...
+            tstr,num2str(sum(avar(Nx+1:2*Nx))),num2str(avar(Nx+1)),num2str(avar(Nx+2)),num2str(avar(Nx+nmid)),num2str(avar(Nx+nmid+1)));
+    end
 end
-fprintf('%s: Posterior squared error %s = %s + %s + ... + %s + %s + ...\n',...
-    tstr,num2str(sum(aerr(Nx+1:2*Nx))),num2str(aerr(Nx+1)),num2str(aerr(Nx+2)),num2str(aerr(Nx+nmid)),num2str(aerr(Nx+nmid+1)));
-if nargin==3
-    fprintf('%s: Posterior error variance %s = %s + %s + ... + %s + %s + ...\n',...
-        tstr,num2str(sum(avar(Nx+1:2*Nx))),num2str(avar(Nx+1)),num2str(avar(Nx+2)),num2str(avar(Nx+nmid)),num2str(avar(Nx+nmid+1)));
-end
-end
+
