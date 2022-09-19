@@ -78,25 +78,26 @@ biascor = get_bias_corrections(outfolder, biascor);
 % biascor: AmB, OmB
 biascor = apply_smoothers(biascor);
 
+%% Parameters diagnostic print
+fprintf('Parms values:\n');
+display(run);
+display(nature);
+display(model);
+display(da);
+display(obs);
+display(biascor);
+
 %% Cycling DA run
+% Execute up to Ncycles-1 DA cycles
 parallelize(run.reserve);
 tic;
-% Execute up to Ncycles-1 DA cycles
-% [tot_err,tot_avar] = ...
-%     parDA_GKSQ(XIC,Xt,y,outfolder,H,Rhat,biascor,da,model,nature,obs,run);
-fprintf('Parms values:\n');
-run
-nature
-model
-da
-obs
-biascor
+[tot_err,tot_avar] = ...
+    parDA_GKSQ(XIC,Xt,y,outfolder,H,Rhat,biascor,da,model,nature,obs,run);
 toc
 
 %% Plot time series of truth and ensemble mean
 if run.ring_movie
-    %plot_ensmean_truth(outfolder,Xt,da,model,obs,run)
-    fprintf('...plot truth here\n');
+    plot_ensmean_truth(outfolder,Xt,da,model,obs,run)
 end
 
 finish = datestr(clock);
@@ -128,17 +129,72 @@ function [outfolder, use_obs_file, run] = get_run_parms()
     run.reserve = str2double(answer{i});
 end
 
+%% Nature run, optional observations compatible with nature run
+function nature = get_nature_run_info(outfolder, use_obs_file)
+% Nature run file must have a filename with the following structure:
+% L05M3_N960_K32_F15.00_I12_b10.00_c2.50_tf0.05_spinup100_tsteps10000_seed51422
+    [nature.ftruth, nature.truepath] =...
+        uigetfile([outfolder,'/*L05*'],'Choose truth file:'); % truth trajectory
+    nature.fobs = '';
+    nature.obspath = '';
+    if use_obs_file
+        compatible = false;
+        while ~compatible
+            [nature.fobs, nature.obspath] =...
+                uigetfile([outfolder,'/obs*'],'Choose obs file:'); % obs trajectory
+            % Check compatibility of truth and obs
+            compatible = new_check_obs_compatibility(nature.ftruth, nature.fobs);
+            if ~compatible
+                fprintf('Obs file\n%s\nincompatible with truth file\n%s\n, retrying...\n',...
+                    nature.fobs, nature.ftruth);
+            end
+        end
+    end
+    % Extract Lorenz 96 Model I, II or III parameters from nature run filename
+    [~,fname,~] = fileparts(nature.ftruth);
+    string = strsplit(fname,'_');
+    nature.K = str2double(string{3}(2:end));
+    nature.F = str2double(string{4}(2:end));
+    nature.I = str2double(string{5}(2:end));
+    nature.b = str2double(string{6}(2:end));
+    nature.c = str2double(string{7}(2:end));
+    nature.timestep = str2double(string{8}(3:end));
+    nature.spinup = str2double(string{9}(7:end));
+    nature.seed = str2double(string{11}(5:end));
+end
+
+%% Model parameters
+function model = get_model_parms(nature)
+    % Allow experiments with parameters that differ from
+    % the nature run parameters
+    name='Model Parameters';
+    numlines=[1 40];
+    opts='on';
+    prompt={'K(parm)','I(parm)','F(orcing)','b (damping)',...
+            'c (coupling)','timestep'};
+    default={num2str(nature.K),num2str(nature.I),...
+        num2str(nature.F),num2str(nature.b),...
+        num2str(nature.c),num2str(nature.timestep)};
+    answer=inputdlg(prompt,name,numlines,default,opts);i=1;
+    model.K = str2double(answer{i});i=i+1;
+    model.I = str2double(answer{i});i=i+1;
+    model.F = str2double(answer{i});i=i+1;
+    model.b = str2double(answer{i});i=i+1;
+    model.c = str2double(answer{i});i=i+1;
+    model.timestep = str2double(answer{i});
+end
+
 %% DA parameters input
 function da = get_da_parms(outfolder)
     name='DA Parameters';
     numlines=[1 40];
     opts='on';
-    prompt={'Time skip','Ensemble size','Confidence level','Spinup',...
+    prompt={'Cycle skip','Ensemble size','Confidence level','Spinup',...
             'Prior inflation','Localization type','Localization radius'};
     default={'1','500','0.95','100','1.64','gc','160'};
     answer=inputdlg(prompt,name,numlines,default,opts);i=1;
-    % Time steps skipped (completely unobserved)
-    da.tskip = str2double(answer{i});i=i+1;
+    % DA cycle skipping (no obs assimilated)
+    da.cycle_skip = str2double(answer{i});i=i+1;
     % number of ensemble members
     da.K = str2double(answer{i});i=i+1;
     % Make output folder for this ensemble size
@@ -231,61 +287,6 @@ function biascor = get_bias_corrections(outfolder, biascor)
     end
 end
 
-%% Nature run, optional observations compatible with nature run
-function nature = get_nature_run_info(outfolder, use_obs_file)
-% Nature run file must have a filename with the following structure:
-% L05M3_N960_K32_F15.00_I12_b10.00_c2.50_tf0.05_spinup100_tsteps10000_seed51422
-    [nature.ftruth, nature.truepath] =...
-        uigetfile([outfolder,'/*L05*'],'Choose truth file:'); % truth trajectory
-    nature.fobs = '';
-    nature.obspath = '';
-    if use_obs_file
-        compatible = false;
-        while ~compatible
-            [nature.fobs, nature.obspath] =...
-                uigetfile([outfolder,'/obs*'],'Choose obs file:'); % obs trajectory
-            % Check compatibility of truth and obs
-            compatible = new_check_obs_compatibility(nature.ftruth, nature.fobs);
-            if ~compatible
-                fprintf('Obs file\n%s\nincompatible with truth file\n%s\n, retrying...\n',...
-                    nature.fobs, nature.ftruth);
-            end
-        end
-    end
-    % Extract Lorenz 96 Model I, II or III parameters from nature run filename
-    [~,fname,~] = fileparts(nature.ftruth);
-    string = strsplit(fname,'_');
-    nature.K = str2double(string{3}(2:end));
-    nature.F = str2double(string{4}(2:end));
-    nature.I = str2double(string{5}(2:end));
-    nature.b = str2double(string{6}(2:end));
-    nature.c = str2double(string{7}(2:end));
-    nature.timestep = str2double(string{8}(3:end));
-    nature.spinup = str2double(string{9}(7:end));
-    nature.seed = str2double(string{11}(5:end));
-end
-
-%% Model parameters
-function model = get_model_parms(nature)
-    % Allow experiments with parameters that differ from
-    % the nature run parameters
-    name='Model Parameters';
-    numlines=[1 40];
-    opts='on';
-    prompt={'K(parm)','I(parm)','F(orcing)','b (damping)',...
-            'c (coupling)','timestep'};
-    default={num2str(nature.K),num2str(nature.I),...
-        num2str(nature.F),num2str(nature.b),...
-        num2str(nature.c),num2str(nature.timestep)};
-    answer=inputdlg(prompt,name,numlines,default,opts);i=1;
-    model.K = str2double(answer{i});i=i+1;
-    model.I = str2double(answer{i});i=i+1;
-    model.F = str2double(answer{i});i=i+1;
-    model.b = str2double(answer{i});i=i+1;
-    model.c = str2double(answer{i});i=i+1;
-    model.timestep = str2double(answer{i});
-end
-
 %% Parallelization options and initialization
 function parallelize(reserve)
     NPROCS = feature('numcores');
@@ -302,8 +303,8 @@ function plot_ensmean_truth(outfolder,Xt,da,model,obs,run)
     posterior = [outfolder,'K',num2str(da.K,'%d\n'),'\',...
         'posterior_alpha_',num2str(da.alpha,'%5.3f\n'),...
         '_tf_',num2str(model.timestep,'%4.2f\n'),...
-        '_R_',num2str(obs.oberr_true,'%4.2f\n'),...
-        '_loc_',locstr,num2str(da.locrad,'%d\n'),...
+        '_R_',num2str(obs.err_true,'%4.2f\n'),...
+        '_loc_',da.locstr,num2str(da.locrad,'%d\n'),...
         '_nc_',num2str(run.Ncycles,'%d\n'),...
         '_1st_',num2str(obs.first,'%d\n'),...
         '_skip_',num2str(obs.skip,'%d\n'),...
