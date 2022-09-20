@@ -59,7 +59,7 @@ Xa = Za .* skm1;
 %traditional KF update with localization
 Pfloc = CL .* Pf;
 PflocHt = Pfloc * H.';
-repr = H*PflocHt + R;
+repr = H * PflocHt + R;
 W = repr \ (y - yb_bar); % More stable than inv(repr)*(y - yb_bar)
 xa_bar = xb_bar + PflocHt * W;
 %ETKF update xa_bar=xb_bar+Pa*H'*Rinv*(y - yb_bar)
