@@ -9,11 +9,10 @@ function [AmB,OmHB,OmHA,AmT,BmT,OmHT] = diff_stats(A,B,O,T,H,spinup)
 if ~isequal(size(B), size(A))
     error("A and B must have same size, aborting...");
 end
-HT = H * T;
 if ~isequal(size(T), [Nx, Ncycles])
     error("T and ensmean of A must have same size, aborting...");
 end
-if ~isequal(size(O), size(HT))
+if ~isequal(size(O), size(H*T))
     error("O and H*T must have same size, aborting...");
 end
 if Ncycles - spinup < 2
@@ -32,6 +31,6 @@ OmHB = mean(O - H*ensmB,2); % Nobs x 1
 OmHA = mean(O - H*ensmA,2); % Nobs x 1
 AmT = mean(ensmA - T, 2); % Nx x 1
 BmT = mean(ensmB - T,2); % Nx x 1
-OmHT = mean(O - HT,2); % Nobs x 1
+OmHT = mean(O - H*T,2); % Nobs x 1
 
 end
