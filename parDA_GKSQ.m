@@ -1,7 +1,7 @@
-function [ensmean,tot_err,tot_avar,varargout] = parDA_GKSQ(XIC,Xt,y,outfolder,...
-          H,Rhat,biascor,da,model,nature,run)
+function [ensmean,post_stmse,post_stvarmse,varargout] =...
+    parDA_GKSQ(XIC,Xt,y,outfolder,H,Rhat,biascor,da,model,nature,run)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Bill Campbell Last Modified 9/19/2022
+% Bill Campbell Last Modified 9/21/2022
 % Global-solve Kalman Square Root filter
 % Added covariance localization
 % Added ensemble variance for comparison with squared error
@@ -105,48 +105,71 @@ for ncycle = 1:Ncycles-1
 end % end number of cycles
 
 fprintf('Mean Posterior Error after %d-cycle spinup\n',da.spinup);
-[aerr,stdev] = mynanstats(scoreKSQ(:,da.spinup+1:end).');
-tot_err = sum(aerr(Nx+1:2*Nx));
-tot_var = sum(stdev(Nx+1:2*Nx).^2);
-[avar,vstdev] = mynanstats(ensvarKSQ(:,da.spinup+1:end).');
-tot_avar = sum(avar(Nx+1:2*Nx));
-tot_vvar = sum(vstdev(Nx+1:2*Nx).^2);
-display_results('GKSQ',aerr,avar);
+[tmse,tbiassq,stmse,stbiassq] =...
+    compute_stats(errKSQ, da.spinup);  % tmse,tbiassq are 1 x 2*Nx
+post_stmse = stmse(2); % ring mean of time mean of posterior squared error
+if nargout >= 4
+    varargout{1} = 100*stbiassq(2)./stmse(2); % Percent due to squared bias
+end
+[tvarmse,tvarbiassq,stvarmse,stvarbiassq] =...
+    compute_stats(ensvarKSQ, da.spinup);  % tvarmse,tvarbiassq are 1 x 2*Nx
+post_stvarmse = stvarmse(2);  % ring mean of time mean of posterior ensemble variance
+if nargout >= 5
+    varargout{2} = 100*stvarbiassq(2)./stvarmse(2); % Percent due to squared bias
+end
+display_results('GKSQ',tmse(Nx+1:2*Nx),tvarmse(Nx+1:2*Nx));
+
 % Time mean ensemble means of differences
 [AmB,OmB,OmA,AmT,BmT,OmT] = diff_stats(XKSQ,ZKSQ,y,Xt,da.spinup);
-% Print spatial means
+% Print spatial means of time means
 fprintf('Mean A-B is %d, mean O-B is %d, mean O-A is %d after %d-cycle spinup\n',...
     mean(AmB), mean(OmB), mean(OmA), da.spinup);
 fprintf('Mean A-T is %d, mean B-T is %d, mean O-T is %d after %d-cycle spinup\n',...
     mean(AmT), mean(BmT), mean(OmT), da.spinup);
+
+% Always save the following stats
+fprintf('Saving output stats...\n');
+generic = fullfile(outfolder,...
+        ['K',num2str(da.K,'%d')],...
+        [run.expname,'_generic_GKSQ.mat']);
+errstats = strrep(generic,'generic','errstats');
+save(errstats,'errKSQ','tmse','tbiassq','stmse','stbiassq');
+ensvarstats = strrep(generic,'generic','ensvarstats');
+save(ensvarstats,'ensvarKSQ','tvarmse','tvarbiassq','stvarmse','stvarbiassq');
+statsfile = strrep(generic,'generic','diffstats');
+save(statsfile,'AmB','OmB','OmA','AmT','BmT','OmT','-v7.3');
+% Optional save obs
+if ~run.use_obs_file
+    fprintf('Saving obs (includes spinup)...\n');
+    obsfile = strrep(generic,'generic','obs');
+    save(obsfile,'y');
+end
+% Optional save full prior, posterior
+if (run.save_state)    % Create filenames, and open files
+    fprintf('Saving prior and posterior full states (includes spinup)...\n');
+    prior = strrep(generic,'generic','prior');
+    save(prior,'ZKSQ','-v7.3');
+    posterior = strrep(generic,'generic','posterior');
+    save(posterior,'XKSQ','-v7.3');
+end
+
 % Compute ensemble mean of posterior for plotting
 ensmean = squeeze(mean(XKSQ,2));
 
-% Save states in .mat files
-if (run.save_state)    % Create filenames, and open files
-    tsave=tic;
-    fprintf('Saving prior, posterior, parameters...');
-    prior = fullfile(outfolder,...
-        ['K',num2str(da.K,'%d')],...
-        [run.expname,'_prior_GKSQ.mat']);
-    save(prior,'ZKSQ','-v7.3');
-    posterior = strrep(prior,'prior','posterior');
-    % Saving errKSQ instead of scoreKSQ
-    save(posterior,'XKSQ','errKSQ','ensvarKSQ','-v7.3');
-    statsfile = strrep(prior,'prior','diffstats');
-    save(statsfile,'AmB','OmB','OmA','AmT','BmT','OmT','-v7.3');
-    if ~run.use_obs_file
-        obsfile = strrep(prior,'prior','obs');
-        save(obsfile,'y');
-    end
-    fprintf('took %5.3f seconds.\n',toc(tsave));
-end % if (savestate)
-if nargout>=3
-    varargout{1} = tot_var;
 end
-if nargout==4
-    varargout{2} = tot_vvar;
-end
+
+function [tmse,tbiassq,stmse,stbiassq] =...
+        compute_stats(space_time, spinup)
+    Nx = size(space_time,1) / 2; % prior and posterior
+    [bias,~,rmse] = mynanstats(space_time(:,spinup+1:end).');  % 1 x 2*Nx
+    tbiassq = bias.^2;  % 1 x 2*Nx
+    prior_stbiassq = mean(tbiassq(1:Nx));
+    post_stbiassq = mean(tbiassq(Nx+1:2*Nx));
+    stbiassq = [prior_stbiassq post_stbiassq];  % 1 x 2
+    tmse = rmse.^2;  % 1 x 2*Nx
+    prior_stmse = mean(tmse(1:Nx));
+    post_stmse = mean(tmse(Nx+1:2*Nx));
+    stmse = [prior_stmse post_stmse];  % 1 x 2
 end
 
 function display_results(tstr,aerr,varargin)
