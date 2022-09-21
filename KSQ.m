@@ -32,8 +32,8 @@ else
     yb_bar = H * xb_bar; % Nobs x 1
 end
 % Apply obs bias correction directly to obs
-if biascor.obs  % Subtract mean of O - B from another run
-    y = y - biascor.OmB;
+if biascor.obs  % Subtract mean of O - H*B from another run
+    y = y - biascor.OmHB;
 end
 
 %% Create and update ensemble

@@ -343,8 +343,8 @@ function biascor = get_bias_corrections(outfolder, biascor)
         % Subtract from ob the mean of O-B from previous obs bias run with
         % perfect(i.e. identical model params e.g. forcing) model and no bias correction
         [fn,pn] = uigetfile(fname,'Grab O-B');
-        load([pn,fn],'OmB');
-        biascor.OmB_raw = OmB; 
+        load([pn,fn],'OmHB');
+        biascor.OmB_raw = OmHB;
         biascor.fname_OmB_raw = fullfile(pn,fn);
     end
 end
@@ -460,11 +460,11 @@ function biascor = apply_smoothers(biascor)
                 % Apply periodic savitzky-golay filter
                 order = biascor.innov_smoother_parms(1);
                 framelen = biascor.innov_smoother_parms(2);
-                biascor.OmB = circ_sg_filt(biascor.OmB_raw, order, framelen);
+                biascor.OmHB = circ_sg_filt(biascor.OmHB_raw, order, framelen);
             otherwise
                 biascor.innov_smoother = 'none';
                 biascor.innov_smoother_parms = [];
-                biascor.OmB = biascor.OmB_raw;
+                biascor.OmHB = biascor.OmHB_raw;
         end
     end
 end

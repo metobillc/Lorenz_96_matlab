@@ -120,12 +120,12 @@ end
 display_results('GKSQ',tmse(Nx+1:2*Nx),tvarmse(Nx+1:2*Nx));
 
 % Time mean ensemble means of differences
-[AmB,OmB,OmA,AmT,BmT,OmT] = diff_stats(XKSQ,ZKSQ,y,Xt,da.spinup);
+[AmB,OmHB,OmHA,AmT,BmT,OmHT] = diff_stats(XKSQ,ZKSQ,y,Xt,H,da.spinup);
 % Print spatial means of time means
-fprintf('Mean A-B is %d, mean O-B is %d, mean O-A is %d after %d-cycle spinup\n',...
-    mean(AmB), mean(OmB), mean(OmA), da.spinup);
-fprintf('Mean A-T is %d, mean B-T is %d, mean O-T is %d after %d-cycle spinup\n',...
-    mean(AmT), mean(BmT), mean(OmT), da.spinup);
+fprintf('Mean A-B is %d, mean O-HB is %d, mean O-HA is %d after %d-cycle spinup\n',...
+    mean(AmB), mean(OmHB), mean(OmHA), da.spinup);
+fprintf('Mean A-T is %d, mean B-T is %d, mean O-HT is %d after %d-cycle spinup\n',...
+    mean(AmT), mean(BmT), mean(OmHT), da.spinup);
 
 % Always save the following stats
 fprintf('Saving output stats...\n');
@@ -137,7 +137,7 @@ save(errstats,'errKSQ','tmse','tbiassq','stmse','stbiassq');
 ensvarstats = strrep(generic,'generic','ensvarstats');
 save(ensvarstats,'ensvarKSQ','tvarmse','tvarbiassq','stvarmse','stvarbiassq');
 statsfile = strrep(generic,'generic','diffstats');
-save(statsfile,'AmB','OmB','OmA','AmT','BmT','OmT','-v7.3');
+save(statsfile,'AmB','OmHB','OmHA','AmT','BmT','OmHT','-v7.3');
 % Optional save obs
 if ~run.use_obs_file
     fprintf('Saving obs (includes spinup)...\n');
