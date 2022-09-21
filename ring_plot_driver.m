@@ -5,7 +5,7 @@
 prompt={'MSE Logscale','MSE Plot Prior', 'Ensvar Logscale', 'Ensvar Plot Prior'};
 name='Ring Plot Options';
 numlines=1;
-default={'0','1','0','1'};,...
+default={'0','1','0','1'};
 answer=inputdlg(prompt,name,numlines,default);i=1;
 % MSE Logscale
 mse_logscale = str2double(answer{i});i=i+1;
