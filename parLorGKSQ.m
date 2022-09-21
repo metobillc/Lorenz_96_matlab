@@ -12,17 +12,7 @@ fprintf('Started: %s\n',start);
 % run: expname,Ncycles,printcycle,use_obs_file,save_state,ring_movie,reserve
 [infolder, run] = get_run_parms();
 % Guard against overwriting
-outfolder = fullfile(infolder, run.expname);
-if exist(outfolder, 'dir')
-    reply = input(sprintf('Directory %s exists, OK to overwrite? Y/N: ',...
-        strrep(outfolder,'\','\\')),'s');
-    if lower(reply(1:1)) ~= 'y'
-        error('Aborting run to avoid potential overwrite of prior experiment %s in %s',...
-              run.expname,outfolder);
-    end
-else
-    mkdir(outfolder);
-end
+outfolder = create_outfolder(infolder, run);
 
 %% Nature run
 % Optional compatible observations from file,
@@ -161,6 +151,24 @@ function [infolder, run] = get_run_parms()
     run.ring_movie = logical(str2double(answer{i}));i=i+1;
     % Processors to reserve for non-Matlab use
     run.reserve = str2double(answer{i});
+end
+
+%% Create output folder, warning if already exists
+function outfolder = create_outfolder(infolder, run)
+    outfolder = fullfile(infolder,'Experiments',run.expname);
+    if exist(outfolder, 'dir')
+        reply = input(sprintf('Directory %s exists, OK to overwrite? Y/N: ',...
+            strrep(outfolder,'\','\\')),'s');
+        if lower(reply(1:1)) ~= 'y'
+            error('Aborting run to avoid potential overwrite of prior experiment %s in %s',...
+                  run.expname,outfolder);
+        end
+    else
+        success = mkdir(outfolder);
+        if ~success
+            error('Failed to create %s folder, aborting...\n',outfolder);
+        end
+    end
 end
 
 %% Nature run, optional observations compatible with nature run
