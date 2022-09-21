@@ -1,5 +1,5 @@
-function [tot_err,tot_avar,varargout] = parDA_GKSQ(XIC,Xt,y,outfolder,...
-          H,Rhat,biascor,da,model,nature,obs,run)
+function [ensmean,tot_err,tot_avar,varargout] = parDA_GKSQ(XIC,Xt,y,outfolder,...
+          H,Rhat,biascor,da,model,nature,run)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Bill Campbell Last Modified 9/19/2022
 % Global-solve Kalman Square Root filter
@@ -37,20 +37,9 @@ ensvarKSQ = scoreKSQ;
 errKSQ = scoreKSQ;
 
 fprintf('Cycle = 1 of %d: da.K=%d,model.timestep=%4.2f,da.alpha=%5.3f,seed=%d\n',...
-    Ncycles,da.K,model.timestep,da.alpha);
-first = true;
-da.ci = abs(da.ci);
-if (da.ci > 1.0) % test for pctg rather than decimal
-    da.ci = 100*da.ci;
-end
-if (da.ci > 1.0)
-    da.ci = 0.95; % default to 95%
-end
-save_printcycle = run.printcycle;
-run.printcycle = min(run.printcycle,1000);
-detect_lorenz2005(model);
-
+    Ncycles,da.K,model.timestep,da.alpha,nature.seed);
 tstart=tic;
+first = true;
 loranon = @(t, x) circ_lorenz2005(t, x, model);
 for ncycle = 1:Ncycles-1
     %%%%%%%%% Global Kalman Square Root
@@ -97,8 +86,8 @@ for ncycle = 1:Ncycles-1
         % Estimate timing
         telapsed=toc(tstart);
         fprintf('Cycle = %d of %d: da.K=%d,model.timestep=%4.2f,da.alpha=%5.3f,seed=%d,time=%5.2f seconds\n',...
-            ncycle,Ncycles,da.K,model.timestep,da.alpha,telapsed);
-        display_results(fstr,time_avg.',time_vavg.');
+            ncycle,Ncycles,da.K,model.timestep,da.alpha,nature.seed,telapsed);
+        display_results('GKSQ',time_avg.',time_vavg.');
         % First fix plot_results, then add ensvar
         plot_results(first,ncycle,prior_space_mse_norm,prior_space_varse_norm,...
                      post_space_mse_norm,post_space_varse_norm,...
@@ -110,7 +99,6 @@ for ncycle = 1:Ncycles-1
             tsecond=round(mod(t_estimate,60));
             fprintf('Estimated time to completion is %d hours %d minutes %d seconds\n',...
                 thour,tminute,tsecond);
-            run.printcycle = save_printcycle;
             first = false;
         end
     end % diagnostic output
@@ -123,7 +111,7 @@ tot_var = sum(stdev(Nx+1:2*Nx).^2);
 [avar,vstdev] = mynanstats(ensvarKSQ(:,da.spinup+1:end).');
 tot_avar = sum(avar(Nx+1:2*Nx));
 tot_vvar = sum(vstdev(Nx+1:2*Nx).^2);
-display_results(fstr,aerr,avar);
+display_results('GKSQ',aerr,avar);
 % Time mean ensemble means of differences
 [AmB,OmB,OmA,AmT,BmT,OmT] = diff_stats(XKSQ,ZKSQ,y,Xt,da.spinup);
 % Print spatial means
@@ -131,38 +119,26 @@ fprintf('Mean A-B is %d, mean O-B is %d, mean O-A is %d after %d-cycle spinup\n'
     mean(AmB), mean(OmB), mean(OmA), da.spinup);
 fprintf('Mean A-T is %d, mean B-T is %d, mean O-T is %d after %d-cycle spinup\n',...
     mean(AmT), mean(BmT), mean(OmT), da.spinup);
+% Compute ensemble mean of posterior for plotting
+ensmean = squeeze(mean(XKSQ,2));
 
 % Save states in .mat files
 if (run.save_state)    % Create filenames, and open files
     tsave=tic;
     fprintf('Saving prior, posterior, parameters...');
-    prior = [outfolder,'K',num2str(da.K,'%d\n'),'\',...
-        'prior_alpha_',num2str(da.alpha,'%5.3f\n'),...
-        '_tf_',num2str(model.timestep,'%4.2f\n'),...
-        '_R_',num2str(obs.err_assumed,'%4.2f\n'),...
-        '_loc_',da.locstr,num2str(da.locrad,'%d\n'),...
-        '_nc_',num2str(ncycle+1,'%d\n'),...
-        '_1st_',num2str(obs.first,'%d\n'),...
-        '_skip_',num2str(obs.skip,'%d\n'),...
-        '_Nx_',num2str(Nx,'%d\n'),...
-        '_Kp_',num2str(model.K,'%d\n')];
-    suffix='';
-    if (biascor.obs~=0 || biascor.simobs_only ~= 0 || biascor.model ~= 0)
-        suffix = sprintf('_bcobs_%1d_bcsimobs_%1d_bcmodel_%1d', ...
-            biascor.obs, biascor.simobs_only, biascor.model);
-    end
-    newprior = [prior,'_GKSQ',suffix];
-    save([newprior,'.mat'],'ZKSQ','-v7.3');
+    prior = fullfile(outfolder,...
+        ['K',num2str(da.K,'%d')],...
+        [run.expname,'_prior_GKSQ.mat']);
+    save(prior,'ZKSQ','-v7.3');
     posterior = strrep(prior,'prior','posterior');
-    newpost  = [posterior,'_GKSQ',suffix];
     % Saving errKSQ instead of scoreKSQ
-    save([newpost,'.mat'],'XKSQ','errKSQ','ensvarKSQ','-v7.3');
-    parmfile = strrep(prior,'prior','parameters');
-    newparmfile = [parmfile,'_GKSQ',suffix];
-    save([newparmfile,'.mat'],'run','nature','model','da','obs','biascor','-v7.3');
+    save(posterior,'XKSQ','errKSQ','ensvarKSQ','-v7.3');
     statsfile = strrep(prior,'prior','diffstats');
-    newstatsfile = [statsfile,'_GKSQ',suffix];
-    save([newstatsfile,'.mat'],'AmB','OmB','OmA','AmT','BmT','OmT','-v7.3');
+    save(statsfile,'AmB','OmB','OmA','AmT','BmT','OmT','-v7.3');
+    if ~run.use_obs_file
+        obsfile = strrep(prior,'prior','obs');
+        save(obsfile,'y');
+    end
     fprintf('took %5.3f seconds.\n',toc(tsave));
 end % if (savestate)
 if nargout>=3
