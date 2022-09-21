@@ -16,7 +16,7 @@ function [avg,stdev,varargout] = mynanstats(x,flag)
 %   the sample about its mean.  MYNANSTATS(X,0) is the same as 
 %   MYNANSTATS(X).
 %
-%   Optional output argument computest the RMS error, which is the square
+%   Optional output argument computes the RMS error, which is the square
 %   root of the sum of the squares of the avg and stdev.
 %
 %   See also MYNANSTD, MYNANMEAN, MYNANMEDIAN, MYNANMIN, MYNANMAX, MYNANSUM.
