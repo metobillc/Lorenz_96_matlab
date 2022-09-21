@@ -3,20 +3,36 @@
 % Using Lorenz 96 Model I, II or III
 % Global Kalman Square Root filter
 % Bill Campbell
-% Last modified 9/18/2022
+% Last modified 9/19/2022
 
 start = datestr(clock);
 fprintf('Started: %s\n',start);
 
 %% General parameters
 % run: Ncycles,printcycle,save_state,ring_movie,reserve
-[outfolder, use_obs_file, run] = get_run_parms();
+[infolder, run] = get_run_parms();
+% Guard against overwriting
+outfolder = fullfile(infolder, run.expname);
+if exist(outfolder, 'dir')
+    reply = input(sprintf('Directory %s exists, OK to overwrite? Y/N: ',outfolder),'s');
+    if lower(reply(1:1)) ~= 'y'
+        error('Aborting run to avoid potential overwrite of prior experiment %s in %s',...
+              run.expname,outfolder);
+    end
+else
+    mkdir(outfolder);
+end
 
 %% Nature run
-% Optional compatible observations from file, otherwise will draw obs
-% as needed
-% nature: K,F,I,b,c,timestep,spinup,seed,ftruth,truepath,fobs,obspath
-nature = get_nature_run_info(outfolder, use_obs_file);
+% Optional compatible observations from file,
+% otherwise will draw obs as needed
+% nature: ftruth,truepath,fobs,obspath,
+%         K,F,I,b,c,timestep,spinup,seed,abstol,reltol
+nature = get_nature_run_info(infolder, run.use_obs_file);
+% Load nature run discarding spinup
+[Xt, nature.abstol, nature.reltol] =...
+    load_truth(nature.truepath, nature.ftruth);
+Xt = Xt(:, nature.spinup+1:end); % discard nature run spinup
 
 %% Model parameters
 % Default is the same as the nature run
@@ -24,13 +40,14 @@ nature = get_nature_run_info(outfolder, use_obs_file);
 % model: K,F,I,b,c,timestep,abstol,reltol
 model = get_model_parms(nature);
 
-%% Load nature run discarding spinup
-[Xt, model.abstol, model.reltol] = load_truth(nature.truepath,nature.ftruth); % full nature run
-Xt = Xt(:,nature.spinup+1:end); % discard nature run spinup
-
 %% DA parameters
-% da: tskip,K,ci,spinup,alpha,loctype,locstr,locrad
-da = get_da_parms(outfolder);
+% da: cycle_skip,K,ci,spinup,alpha,loctype,locstr,locrad
+da = get_da_parms();
+% Make output folder for this ensemble size if needed
+ensout = fullfile(outfolder,['K',num2str(da.K,'%d')]);
+if ~exist(ensout,'dir')
+    mkdir(ensout);
+end
 
 %% Generate initial ensemble from nature run climatology
 % Equally spaced through time (could randomize this later)
@@ -42,7 +59,7 @@ Xt = Xt(:,1:run.Ncycles);  % Nx x Ncycles
 %% Observation parameters
 % obs: seed,first,skip,err_true,err_assumed,bias,biasfac
 obs = get_obs_parms();
-if use_obs_file
+if run.use_obs_file
     obs.path = nature.obspath;
     obs.file = nature.fobs;
 end
@@ -50,14 +67,14 @@ end
 %% Forward model and observations drawn from file or constructed
 Nx = size(Xt,1);
 [H, R, Rhat] = get_forward_model(Nx, obs);
-if use_obs_file
-    y = load_obs(obs.path,obs.file);  % observations consistent with nature run
-    y = y(:,nature.spinup+1:end); % must discard same spinup period
+if run.use_obs_file
+    y = load_obs(obs.path, obs.file);  % observations consistent with nature run
+    y = y(:, nature.spinup+1:end); % must discard same spinup period
     if (run.Ncycles > size(y,2))
         error('Error -- obs file not long enough: Ncycles=%d\n > len(obs)',...
               run.Ncycles,size(y,2));
-    else % Only use needed portion of nature run and obs
-        y = y(:,1:run.Ncycles);  % Nx x Ncycles
+    else % Only use needed portion of obs
+        y = y(:,1:run.Ncycles);  % Nobs x Ncycles
     end
 else
     y0 = observe_truth(Xt, H, R, obs);
@@ -78,7 +95,7 @@ biascor = get_bias_corrections(outfolder, biascor);
 % biascor: AmB, OmB
 biascor = apply_smoothers(biascor);
 
-%% Parameters diagnostic print
+%% Parameters diagnostic print and save
 fprintf('Parms values:\n');
 display(run);
 display(nature);
@@ -86,18 +103,23 @@ display(model);
 display(da);
 display(obs);
 display(biascor);
+parmfile = fullfile(outfolder,...
+                    ['K',num2str(da.K,'%d')],...
+                    [run.expname,'_parms.mat']);
+save(parmfile,'run','nature','model','da','obs','biascor');
 
 %% Cycling DA run
 % Execute up to Ncycles-1 DA cycles
 parallelize(run.reserve);
 tic;
-[tot_err,tot_avar] = ...
-    parDA_GKSQ(XIC,Xt,y,outfolder,H,Rhat,biascor,da,model,nature,obs,run);
+[ensmean,tot_err,tot_avar] = ...
+    parDA_GKSQ(XIC,Xt,y,outfolder,H,Rhat,biascor,da,model,nature,run);
 toc
 
 %% Plot time series of truth and ensemble mean
 if run.ring_movie
-    plot_ensmean_truth(outfolder,Xt,da,model,obs,run)
+    tskip = 4; % One ringplot per day
+    plot_ensmean_truth(Xt,ensmean,tskip)
 end
 
 finish = datestr(clock);
@@ -105,22 +127,25 @@ fprintf('Started: %s\nFinished: %s\n',start,finish);
 
 
 %% General run input
-function [outfolder, use_obs_file, run] = get_run_parms()
+function [infolder, run] = get_run_parms()
     % Get general parameters for the run
-    outfolder = uigetdir('','Choose output folder:');
+    infolder = uigetdir('..','Choose output folder:');
     name='Run Input';
-    numlines=[1 40];
+    numlines=[1 120];
     opts='on';
-    prompt={'Cycles','Cycles per print','Use obs file',...
+    prompt={'Experiment Name','Cycles','Cycles per print','Use obs file',...
             'Save state','Ring movie','Reserved procs'};
-    default={'1000','100','1','1','0','1'};
-    answer=inputdlg(prompt,name,numlines,default,opts);i=1;    
+    default={'Refactor_test','500','25','0',...
+             '1','1','1'};
+    answer=inputdlg(prompt,name,numlines,default,opts);i=1;
+    % Unique experiment name
+    run.expname = answer{i};i=i+1;
     % Number of cycles to run
     run.Ncycles = str2double(answer{i});i=i+1;
     % Cycles between print/plot of run
     run.printcycle = str2double(answer{i});i=i+1;
     % Use pre-drawn obs from file
-    use_obs_file = logical(str2double(answer{i}));i=i+1;
+    run.use_obs_file = logical(str2double(answer{i}));i=i+1;
     % Save full time history of state vector
     run.save_state = logical(str2double(answer{i}));i=i+1;
     % Display ring movie at end of run
@@ -130,18 +155,23 @@ function [outfolder, use_obs_file, run] = get_run_parms()
 end
 
 %% Nature run, optional observations compatible with nature run
-function nature = get_nature_run_info(outfolder, use_obs_file)
+function nature = get_nature_run_info(infolder, use_obs_file)
 % Nature run file must have a filename with the following structure:
 % L05M3_N960_K32_F15.00_I12_b10.00_c2.50_tf0.05_spinup100_tsteps10000_seed51422
+    if exist(fullfile(infolder,'Nature_runs'),'dir')
+        infolder = fullfile(infolder,'Nature_runs');
+    end    
+    fname = fullfile(infolder,'*L05*');
     [nature.ftruth, nature.truepath] =...
-        uigetfile([outfolder,'/*L05*'],'Choose truth file:'); % truth trajectory
-    nature.fobs = '';
-    nature.obspath = '';
+        uigetfile(fname,'Choose truth file:'); % truth trajectory
+    nature.fobs = 'Unused';
+    nature.obspath = 'Unused';
     if use_obs_file
         compatible = false;
         while ~compatible
+            fname = fullfile(infolder,'obs*');
             [nature.fobs, nature.obspath] =...
-                uigetfile([outfolder,'/obs*'],'Choose obs file:'); % obs trajectory
+                uigetfile(fname,'Choose obs file:'); % obs trajectory
             % Check compatibility of truth and obs
             compatible = new_check_obs_compatibility(nature.ftruth, nature.fobs);
             if ~compatible
@@ -168,41 +198,51 @@ function model = get_model_parms(nature)
     % Allow experiments with parameters that differ from
     % the nature run parameters
     name='Model Parameters';
-    numlines=[1 40];
+    numlines=[1 80];
     opts='on';
-    prompt={'K(parm)','I(parm)','F(orcing)','b (damping)',...
-            'c (coupling)','timestep'};
+    prompt={'K(parm)','I(parm)',...
+            'F(orcing)','b (damping)',...
+            'c (coupling)','timestep',...
+            'abstol','reltol'};
     default={num2str(nature.K),num2str(nature.I),...
         num2str(nature.F),num2str(nature.b),...
-        num2str(nature.c),num2str(nature.timestep)};
+        num2str(nature.c),num2str(nature.timestep),...
+        num2str(nature.abstol),num2str(nature.reltol)};
     answer=inputdlg(prompt,name,numlines,default,opts);i=1;
     model.K = str2double(answer{i});i=i+1;
     model.I = str2double(answer{i});i=i+1;
     model.F = str2double(answer{i});i=i+1;
     model.b = str2double(answer{i});i=i+1;
     model.c = str2double(answer{i});i=i+1;
-    model.timestep = str2double(answer{i});
+    model.timestep = str2double(answer{i});i=i+1;
+    model.abstol = str2double(answer{i});i=i+1;
+    model.reltol = str2double(answer{i});
+    model.type = detect_lorenz2005(model);
 end
 
 %% DA parameters input
-function da = get_da_parms(outfolder)
+function da = get_da_parms()
     name='DA Parameters';
-    numlines=[1 40];
+    numlines=[1 80];
     opts='on';
     prompt={'Cycle skip','Ensemble size','Confidence level','Spinup',...
             'Prior inflation','Localization type','Localization radius'};
-    default={'1','500','0.95','100','1.64','gc','160'};
+    default={'1','500','0.95','100',...
+             '1.64','gc','160'};
     answer=inputdlg(prompt,name,numlines,default,opts);i=1;
     % DA cycle skipping (no obs assimilated)
     da.cycle_skip = str2double(answer{i});i=i+1;
     % number of ensemble members
     da.K = str2double(answer{i});i=i+1;
-    % Make output folder for this ensemble size
-    if ~exist([outfolder,'K',num2str(da.K,'%d\n')], 'dir')
-        mkdir([outfolder,'K',num2str(da.K,'%d\n')]);
-    end
     % Confidence level (0.95 is typical)
     da.ci = str2double(answer{i});i=i+1;
+    da.ci = abs(da.ci);
+    if (da.ci > 1.0) % test for pctg rather than decimal
+        da.ci = 100 * da.ci;
+    end
+    if (da.ci > 1.0)
+        da.ci = 0.95; % default to 95%
+    end
     % DA spinup
     da.spinup = str2double(answer{i});i=i+1;
     % prior inflation
@@ -230,11 +270,12 @@ end
 %% Observation parameters input
 function obs = get_obs_parms()
     name='Obs Parameters';
-    numlines=[1 40];
+    numlines=[1 80];
     opts='on';
     prompt={'Seed','First var observed','Grid skip',...
-        'True Ob error','Assumed Ob error','Ob bias','Ob bias factor',};
-    default={'4249687','1','1','1.0','1.0','0.0','1.0'};
+            'True Ob error','Assumed Ob error','Ob bias','Ob bias factor'};
+    default={'4249687','1','1',...
+             '1.0','1.0','0.3','1.0'};
     answer=inputdlg(prompt,name,numlines,default,opts);i=1;
     % Seed for rng to draw obs
     obs.seed = str2double(answer{i});i=i+1;
@@ -254,11 +295,12 @@ end
 %% Bias correction parameters input
 function biascor = get_bias_correction_parms()
     name='Bias Correction Input';
-    numlines=[1 40];
+    numlines=[1 80];
     opts='on';
-    prompt={'Apply BC to obs','Apply BC to model',...
+    prompt={'Apply BC to obs','Apply BC to model AND simobs',...
             'Apply BC ONLY to simobs'};
-    default={'0','0','0'};
+    default={'1','1',...
+             '0'};
     answer=inputdlg(prompt,name,numlines,default,opts);i=1;
     % apply bias correction to obs
     biascor.obs = logical(str2double(answer{i}));i=i+1;
@@ -270,20 +312,23 @@ end
 
 %% Bias corrections input
 function biascor = get_bias_corrections(outfolder, biascor)
+    fname = fullfile(outfolder,'K*','diffstat*');
     % Load bias corrections for model and/or for simulated obs
     if (biascor.model || biascor.simobs_only)
         % Can e.g. add long-term mean of analysis minus background here
-        [fn,pn,~] = uigetfile([outfolder,'K*/diffstat*'],'Grab A-B');
+        [fn,pn] = uigetfile(fname,'Grab A-B');
         load([pn,fn],'AmB');
         biascor.AmB_raw = AmB;
+        biascor.fname_AmB_raw = fullfile(pn,fn);
     end
     % Load bias corrections for obs
     if (biascor.obs)
         % Subtract from ob the mean of O-B from previous obs bias run with
         % perfect(i.e. identical model params e.g. forcing) model and no bias correction
-        [fn,pn,~] = uigetfile([outfolder,'K*/diffstat*'],'Grab O-B');
+        [fn,pn] = uigetfile(fname,'Grab O-B');
         load([pn,fn],'OmB');
         biascor.OmB_raw = OmB; 
+        biascor.fname_OmB_raw = fullfile(pn,fn);
     end
 end
 
@@ -297,41 +342,25 @@ function parallelize(reserve)
 end
 
 %% Plot time series of truth and ensemble mean
-function plot_ensmean_truth(outfolder,Xt,da,model,obs,run)
+function plot_ensmean_truth(Xt,ensmean,tskip)
     myfilt = 'GKSQ';
-    Nx = size(Xt,1);
-    posterior = [outfolder,'K',num2str(da.K,'%d\n'),'\',...
-        'posterior_alpha_',num2str(da.alpha,'%5.3f\n'),...
-        '_tf_',num2str(model.timestep,'%4.2f\n'),...
-        '_R_',num2str(obs.err_true,'%4.2f\n'),...
-        '_loc_',da.locstr,num2str(da.locrad,'%d\n'),...
-        '_nc_',num2str(run.Ncycles,'%d\n'),...
-        '_1st_',num2str(obs.first,'%d\n'),...
-        '_skip_',num2str(obs.skip,'%d\n'),...
-        '_Nx_',num2str(Nx,'%d\n'),...
-        '_Kp_',num2str(model.K,'%d\n'),...
-        '_seed_',num2str(obs.seed,'%d\n'),...
-        '_',myfilt,'.mat'];
-    Xa = load(posterior);
-    fn = fieldnames(Xa);
-    Xa = Xa.(fn{1});
+    [Nx,Ncycles] = size(Xt);
     figure;
     plot(Xt(:,1),'k-');
     hold on; grid on;
-    plot(mean(Xa(:,:,1),2),'r-');
+    plot(ensmean(:,1),'r-');
     ylim([-15,20]);
     xlim([1,Nx]);
     xtt = floor(Nx/16);
     xticks([1 xtt:xtt:Nx]);
     legend('Truth','Ensmean');
     title(sprintf('%s time=1',myfilt));
-    tskip = 4; % Plot once/day
-    for t=tskip+1:tskip:run.Ncycles
+    for t=tskip+1:tskip:Ncycles
         pause(0.5);
         clf;
         plot(Xt(:,t),'k-');
         hold on; grid on;
-        plot(mean(Xa(:,:,t),2),'r-');
+        plot(ensmean(:,t),'r-');
         ylim([-15,20]);
         xlim([1,Nx]);
         xtt = floor(Nx/16);
@@ -380,7 +409,7 @@ function biascor = apply_smoothers(biascor)
     % Apply smoother to increments
     if (biascor.model || biascor.simobs_only)
         name='Increment Smoother';
-        numlines=[1 40];
+        numlines=[1 80];
         opts='on';
         prompt={'Smoother type','Smoother parmlist',};
         default={'Savitzky-Golay','[9, 21]'};
@@ -402,7 +431,7 @@ function biascor = apply_smoothers(biascor)
     if (biascor.obs)
         % Apply smoother to innovationss
         name='Innnovation Smoother';
-        numlines=[1 40];
+        numlines=[1 80];
         opts='on';
         prompt={'Smoother type','Smoother parmlist',};
         default={'Savitzky-Golay','[9, 21]'};
