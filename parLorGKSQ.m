@@ -3,18 +3,19 @@
 % Using Lorenz 96 Model I, II or III
 % Global Kalman Square Root filter
 % Bill Campbell
-% Last modified 9/19/2022
+% Last modified 9/21/2022
 
 start = datestr(clock);
 fprintf('Started: %s\n',start);
 
 %% General parameters
-% run: Ncycles,printcycle,save_state,ring_movie,reserve
+% run: expname,Ncycles,printcycle,use_obs_file,save_state,ring_movie,reserve
 [infolder, run] = get_run_parms();
 % Guard against overwriting
 outfolder = fullfile(infolder, run.expname);
 if exist(outfolder, 'dir')
-    reply = input(sprintf('Directory %s exists, OK to overwrite? Y/N: ',outfolder),'s');
+    reply = input(sprintf('Directory %s exists, OK to overwrite? Y/N: ',...
+        strrep(outfolder,'\','\\')),'s');
     if lower(reply(1:1)) ~= 'y'
         error('Aborting run to avoid potential overwrite of prior experiment %s in %s',...
               run.expname,outfolder);
@@ -37,7 +38,7 @@ Xt = Xt(:, nature.spinup+1:end); % discard nature run spinup
 %% Model parameters
 % Default is the same as the nature run
 % Deviation from default introduces model bias
-% model: K,F,I,b,c,timestep,abstol,reltol
+% model: K,F,I,b,c,timestep,abstol,reltol,type
 model = get_model_parms(nature);
 
 %% DA parameters
@@ -88,7 +89,7 @@ end
 biascor = get_bias_correction_parms();
 
 %% Bias corrections from stats files
-% biascor: AmB_raw,OmB_raw
+% biascor: AmB_raw,OmB_raw,fname_AmB_raw,fname_OmB_raw
 biascor = get_bias_corrections(outfolder, biascor);
 
 %% Apply smoothers to raw increments, innovations used for bias correction
@@ -105,22 +106,30 @@ display(obs);
 display(biascor);
 parmfile = fullfile(outfolder,...
                     ['K',num2str(da.K,'%d')],...
-                    [run.expname,'_parms.mat']);
+                    [run.expname,'_parms_GKSQ.mat']);
 save(parmfile,'run','nature','model','da','obs','biascor');
 
 %% Cycling DA run
 % Execute up to Ncycles-1 DA cycles
 parallelize(run.reserve);
 tic;
-[ensmean,tot_err,tot_avar] = ...
+[ensmean,post_stmse,post_stvarmse,bmse_pct,bvar_pct] = ...
     parDA_GKSQ(XIC,Xt,y,outfolder,H,Rhat,biascor,da,model,nature,run);
 toc
+fprintf('Posterior MSE %7.5f, %4.1f%% due to squared bias\n',...
+    round(post_stmse,3,'significant'),round(bmse_pct,3,'significant'));
+fprintf('(Posterior varMSE %7.5f, %4.1f%% due to squared bias)\n',...
+     round(post_stvarmse,3,'significant'),round(bvar_pct,3,'significant'));
 
 %% Plot time series of truth and ensemble mean
 if run.ring_movie
     tskip = 4; % One ringplot per day
     plot_ensmean_truth(Xt,ensmean,tskip)
 end
+
+%% Output file listing
+fprintf('Run output is in %s:\n',ensout);
+dir(fullfile(ensout,[run.expname,'*']))
 
 finish = datestr(clock);
 fprintf('Started: %s\nFinished: %s\n',start,finish);
@@ -133,10 +142,10 @@ function [infolder, run] = get_run_parms()
     name='Run Input';
     numlines=[1 120];
     opts='on';
-    prompt={'Experiment Name','Cycles','Cycles per print','Use obs file',...
+    prompt={'Experiment Name','Cycles (4/dy)','Cycles per print','Use obs file',...
             'Save state','Ring movie','Reserved procs'};
-    default={'Refactor_test','500','25','0',...
-             '1','1','1'};
+    default={'Refactor_test','416','25','0',...
+             '0','1','1'};
     answer=inputdlg(prompt,name,numlines,default,opts);i=1;
     % Unique experiment name
     run.expname = answer{i};i=i+1;
@@ -227,7 +236,7 @@ function da = get_da_parms()
     opts='on';
     prompt={'Cycle skip','Ensemble size','Confidence level','Spinup',...
             'Prior inflation','Localization type','Localization radius'};
-    default={'1','500','0.95','100',...
+    default={'1','128','0.95','56',...
              '1.64','gc','160'};
     answer=inputdlg(prompt,name,numlines,default,opts);i=1;
     % DA cycle skipping (no obs assimilated)
