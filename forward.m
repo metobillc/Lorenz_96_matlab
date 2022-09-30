@@ -1,4 +1,4 @@
-function [Nobs,H,R] = forward(oblist,rlist)
+function [Nobs,H,R,varargout] = forward(oblist,rlist)
 % R is always diagonal, we can relax this assumption later.
 % May not observe every gridpoint, so 
 % H will be 1 where oblist is 1, 0 otherwise
@@ -18,4 +18,6 @@ elseif length(rlist(idx))==Nobs
 else  % default to 0.1
     R = 0.1*eye(Nobs,Nobs);
 end
+if nargout >= 4
+    varargout{1} = idx;
 end
