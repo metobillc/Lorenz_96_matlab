@@ -5,6 +5,29 @@
 % Bill Campbell
 % Last modified 7/29/2022
 
+%% Get nature run
+outfolder = 'C:\Users\knisely\Desktop\Lorenz_05\'; % Local hard drive
+[ftruth,pathname]=uigetfile([outfolder,'*L05*'],...
+                  'Load Lorenz 96 Model I, II or III full nature run:'); % truth trajectory
+% Extract time step from truth file, e.g.
+% L05M2_N960_K32_F8.00_I1_b1.00_c1.00_tf0.05_spinup100_tsteps10000_seed51422
+% Extract tf, K, F, and seed from truth filename
+tic;
+string=strsplit(ftruth,'_');
+idx=1;     model = str2double(string{idx}(end));
+idx=idx+1; Nx = str2double(string{idx}(2:end));
+idx=idx+1; Kparm = str2double(string{idx}(2:end));
+idx=idx+1; F = str2double(string{idx}(2:end));
+idx=idx+1; Iparm = str2double(string{idx}(2:end));
+idx=idx+1; b = str2double(string{idx}(2:end));
+idx=idx+1; c = str2double(string{idx}(2:end));
+idx=idx+1; tF = str2double(string{idx}(3:end));
+idx=idx+1; spinup =str2double(string{idx}(7:end));
+idx=idx+1; Ncycles = str2double(string{idx}(7:end));
+idx=idx+1; tseed = str2double(string{idx}(5:end-4));
+[Xt,abstol,reltol] = load_truth(pathname,ftruth);
+[N,Ncycles] = size(Xt);
+
 %% Set up R and H for DA
 name='Lorenz 96 Model I,II or III Nature Run Observations';
 numlines=1;
@@ -32,29 +55,6 @@ repr_norm = repr./sum(repr);
 seedlist = str2num(answer{i});i=i+1;
 % Plot option
 plotit = str2double(answer{i});i=i+1;
-
-%% Get nature run
-outfolder = 'C:\Users\knisely\Desktop\Lorenz_05\'; % Local hard drive
-[ftruth,pathname]=uigetfile([outfolder,'*L05*'],...
-                  'Load Lorenz 96 Model I, II or III full nature run:'); % truth trajectory
-% Extract time step from truth file, e.g.
-% L05M2_N960_K32_F8.00_I1_b1.00_c1.00_tf0.05_spinup100_tsteps10000_seed51422
-% Extract tf, K, F, and seed from truth filename
-tic;
-string=strsplit(ftruth,'_');
-idx=1;     model = str2double(string{idx}(end));
-idx=idx+1; Nx = str2double(string{idx}(2:end));
-idx=idx+1; Kparm = str2double(string{idx}(2:end));
-idx=idx+1; F = str2double(string{idx}(2:end));
-idx=idx+1; Iparm = str2double(string{idx}(2:end));
-idx=idx+1; b = str2double(string{idx}(2:end));
-idx=idx+1; c = str2double(string{idx}(2:end));
-idx=idx+1; tF = str2double(string{idx}(3:end));
-idx=idx+1; spinup =str2double(string{idx}(7:end));
-idx=idx+1; Ncycles = str2double(string{idx}(7:end));
-idx=idx+1; tseed = str2double(string{idx}(5:end-4));
-[Xt,abstol,reltol] = load_truth(pathname,ftruth);
-[N,Ncycles] = size(Xt);
 
 %% Loop over seeds
 for is=1:length(seedlist)
