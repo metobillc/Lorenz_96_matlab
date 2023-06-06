@@ -17,7 +17,7 @@ ensvar_logscale = str2double(answer{i});i=i+1;
 ensvar_plot_prior = str2double(answer{i});
 
 %% Load posterior, discarding da_spinup
-outfolder = 'C:\Users\campbell\Document\MATLAB\\Lorenz_96\'; % Local hard drive
+outfolder = 'C:\Users\knisely\Desktop\Lorenz_05\'; % Local hard drive
 [fpost,ppath]=uigetfile([outfolder,'K*/posterior*'],'Choose post file:'); % post
 posterior = fullfile(ppath,fpost);
 fprintf('Loading posterior...\n');

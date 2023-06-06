@@ -59,7 +59,7 @@ function [Xt, Xb, Xa, trueparms, ppath, fprior] = get_run_info(da_spinup)
     % Truth file e.g. L05M3_N960_K32_F15.00_I12_b10.00_c2.50_tf0.05_spinup100_tsteps10000_seed51422
     % Prior file e.g. prior_alpha_1.640_tf_0.05_R_1.00_loc_n10_nc_1000_1st_1_skip_1_Nx_960_Kp_32_seed_29418_GKSQ
     % Nature run location
-    outfolder = 'C:\Users\campbell\Documents\MATLAB\Lorenz_96_model\'; % Local hard drive
+    outfolder = 'C:\Users\knisely\Desktop\Lorenz_05\'; % Local hard drive
     % Load truth, prior, derive posterior and parms names, load those
     [ftruth,tpath]=uigetfile([outfolder,'*L05*'],'Choose truth file:'); % truth trajectory
     truth = fullfile(tpath,ftruth);

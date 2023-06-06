@@ -2,7 +2,7 @@
 % This script calculates spread-skill ratio over time
 
 %% Load prior, posterior, truth
-outfolder='C:\Users\Campbell\Documents\MATLAB\Lorenz_96\';
+outfolder='C:\Users\knisely\Desktop\Lorenz_05\';
 % Prefix is the same:
 % prior_alpha_1.640_tf_0.05_R_1.00_loc_n10_nc_10000_1st_1_skip_1_
 % Old suffix: seed_29418_GKSQ.mat

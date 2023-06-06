@@ -7,7 +7,7 @@
 
 start = datestr(clock);
 fprintf('Started: %s\n',start);
-outfolder = 'C:\Users\campbell\Documents\MATLAB\Lorenz_96_model'; % Local hard drive
+outfolder = 'C:\Users\knisely\Desktop\Lorenz_05\'; % Local hard drive
 prompt={'State variables','Kparm','Forcing','Iparm','Small damp','Coupling',...
     'Cycles','Spinup','Timestep','ODE AbsTol','ODE RelTol','Seedlist','Plotit'};
 name='Lorenz 96 Model I, II and III Nature Run Parameters';

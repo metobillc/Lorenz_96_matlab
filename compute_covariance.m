@@ -15,7 +15,7 @@ for i = 1:length(needed)
     end
 end
 if reload
-    outfolder = 'C:\Users\campbell\Documents\MATLAB\Lorenz_96_model\'; % Local hard drive
+    outfolder = 'C:\Users\knisely\Desktop\Lorenz_05\'; % Local hard drive
     [ftruth,pathname]=uigetfile([outfolder,'*L05*'],...
                       'Load Lorenz 96 Model I, II or III full nature run:'); % truth trajectory
     % Extract spinup from truth file

@@ -228,7 +228,7 @@ function [outfolder, ftruth, truepath, fobs, obspath, nature, spinup] =...
 % Truth file e.g. L05M3_N960_K32_F15.00_I12_b10.00_c2.50_tf0.05_spinup100_tsteps10000_seed51422
     % Obs file e.g. obs_tf0.05_nc10000_R1.00_N960_K32_F15.00_I12_b10.00_c2.50_tsteps960_tseed51422_oseed73033
     % Nature run location
-    outfolder = 'C:\Users\campbell\Documents\MATLAB\Lorenz_96_model\'; % Local hard drive
+    outfolder = 'C:\Users\knisely\Desktop\Lorenz_05\'; % Local hard drive
     % Load truth and compatible observations
     compatible = false;
     while ~compatible

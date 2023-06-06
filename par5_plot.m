@@ -3,7 +3,7 @@
 % Last modified 6/21/2022
 
 %% Load prior, posterior, truth, and obs
-outfolder='C:\Users\campbell\Documents\MATLAB\Lorenz_96_model\';
+outfolder='C:\Users\knisely\Desktop\Lorenz_05\';
 % prior_alpha_1.10_tf_0.05_R_1.00_loc_n40_nc_50_1st_2_skip_4_seed_29418_GKSQ.mat
 [fprior,pprior]=uigetfile([outfolder,'K500\prior*'],'Prior');
 [fpost,ppost]=uigetfile([outfolder,'K500\post*'],'Posterior');

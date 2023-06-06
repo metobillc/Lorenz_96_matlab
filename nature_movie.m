@@ -3,7 +3,7 @@
 % Bill Campbell
 % Last modified 9/1/16
 %% Get nature run file
-outfolder = 'F:\Matlab\work\MultimodelEnsembles\*.mat'; % Local hard drive
+outfolder = 'C:\Users\knisely\Desktop\Lorenz_05\*.mat'; % Local hard drive
 [fname,pname]=uigetfile(outfolder,'Load Lorenz 96 Model II full nature run:'); % truth trajectory
 load([pname fname]);
 [nT,N]=size(Xt);

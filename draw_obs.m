@@ -34,7 +34,7 @@ seedlist = str2num(answer{i});i=i+1;
 plotit = str2double(answer{i});i=i+1;
 
 %% Get nature run
-outfolder = 'C:\Users\campbell\Documents\MATLAB\Lorenz_96_model\'; % Local hard drive
+outfolder = 'C:\Users\knisely\Desktop\Lorenz_05\'; % Local hard drive
 [ftruth,pathname]=uigetfile([outfolder,'*L05*'],...
                   'Load Lorenz 96 Model I, II or III full nature run:'); % truth trajectory
 % Extract time step from truth file, e.g.
