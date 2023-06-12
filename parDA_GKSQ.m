@@ -129,22 +129,42 @@ for ncycle = 1:Ncycles-1
     
 end % end number of cycles
 
-spinup = 100;
-fprintf('Mean Posterior Error after %d-cycle spinup\n',spinup);
-[aerr,stdev] = mynanstats(scoreKSQ(:,spinup+1:end).');
-tot_err = sum(aerr(Nx+1:2*Nx));
-tot_var = sum(stdev(Nx+1:2*Nx).^2);
-[avar,vstdev] = mynanstats(ensvarKSQ(:,spinup+1:end).');
-tot_avar = sum(avar(Nx+1:2*Nx));
-tot_vvar = sum(vstdev(Nx+1:2*Nx).^2);
+% Final scoring
+da_spinup = 100;
+fprintf('Mean Posterior Error after %d-cycle spinup\n',da_spinup);
+
+[aerr,stdev] = mynanstats(scoreKSQ(:,da_spinup+1:end).');
+tmse_prior = aerr(1:Nx); % prior time mean squared error at each gridpoint
+tmse_post = aerr(Nx+1:2*Nx); % posterior mean squared error at each gridpoint
+tot_err = sum(tmse_post); % This value is returned
+
+tstd_prior = stdev(1:Nx);
+tstd_post = stdev(Nx+1:2*Nx);
+tot_var = sum(tstd_post.^2); % This value is unused
+
+[avar,vstdev] = mynanstats(ensvarKSQ(:,da_spinup+1:end).');
+tmean_ensvar_prior = avar(1:Nx); % prior time mean ensemble variance at each gridpoint
+tmean_ensvar_post = avar(Nx+1:2*Nx); % posterior time mean ensemble variance at each gridpoint
+tot_avar = sum(tmean_ensvar_post); % This value is returned
+
+tstd_ensvar_prior = vstdev(1:Nx);
+tstd_ensvar_post = vstdev(Nx+1:2*Nx);
+tot_vvar = sum(tstd_ensvar_post.^2);  % This value is unused
+
 display_results(fstr,aerr,avar);
+
+plot_mse_ring(tmse_prior,tmse_post,tstd_prior,tstd_post, ...
+    tmean_ensvar_prior,tmean_ensvar_post,tstd_ensvar_prior, ...
+    tstd_ensvar_post,ci,Ncycles)
+pause(1);
+
 % Time mean ensemble means of differences
-[AmB,OmB,OmA,AmT,BmT,OmT] = diff_stats(XKSQ,ZKSQ,y,Xt,spinup);
+[AmB,OmB,OmA,AmT,BmT,OmT] = diff_stats(XKSQ,ZKSQ,y,Xt,da_spinup);
 % Print spatial means
 fprintf('Mean A-B is %d, mean O-B is %d, mean O-A is %d after %d-cycle spinup\n',...
-    mean(AmB), mean(OmB), mean(OmA), spinup);
+    mean(AmB), mean(OmB), mean(OmA), da_spinup);
 fprintf('Mean A-T is %d, mean B-T is %d, mean O-T is %d after %d-cycle spinup\n',...
-    mean(AmT), mean(BmT), mean(OmT), spinup);
+    mean(AmT), mean(BmT), mean(OmT), da_spinup);
 
 % Save states in .mat files
 if (savestate)    % Create filenames, and open files
