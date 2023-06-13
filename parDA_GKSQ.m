@@ -159,7 +159,7 @@ plot_mse_ring(tmse_prior,tmse_post,tstd_prior,tstd_post, ...
 pause(1);
 
 % Time mean ensemble means of differences
-[AmB,OmB,OmA,AmT,BmT,OmT] = diff_stats(XKSQ,ZKSQ,y,Xt,da_spinup);
+[AmB,AmBsmooth,OmB,OmBsmooth,OmA,OmAsmooth,AmT,AmTsmooth,BmT,BmTsmooth,OmT,OmTsmooth] = diff_stats(XKSQ,ZKSQ,y,Xt,H,da_spinup);
 % Print spatial means
 fprintf('Mean A-B is %d, mean O-B is %d, mean O-A is %d after %d-cycle spinup\n',...
     mean(AmB), mean(OmB), mean(OmA), da_spinup);
@@ -196,10 +196,10 @@ if (savestate)    % Create filenames, and open files
     save([newpost,'.mat'],'XKSQ','errKSQ','ensvarKSQ','-v7.3');
     parmfile = strrep(prior,'prior','trueparms');
     newparmfile = [parmfile,'_GKSQ',suffix];
-    save([newparmfile,'.mat'],'parms','trueparms','obs_parms','-v7.3');
+    save([newparmfile,'.mat'],'parms','trueparms','obs_parms','H','R','-v7.3');
     statsfile = strrep(prior,'prior','diffstats');
     newstatsfile = [statsfile,'_GKSQ',suffix];
-    save([newstatsfile,'.mat'],'AmB','OmB','OmA','AmT','BmT','OmT','-v7.3');
+    save([newstatsfile,'.mat'],'AmB','OmB','OmA','AmT','BmT','OmT','AmBsmooth','OmBsmooth','OmAsmooth','AmTsmooth','BmTsmooth','OmTsmooth','-v7.3');
     fprintf('took %5.3f seconds.\n',toc(tsave));
 end % if (savestate)
 

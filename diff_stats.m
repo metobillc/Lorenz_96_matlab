@@ -1,4 +1,4 @@
-function [AmB,OmHB,OmHA,AmT,BmT,OmHT] = diff_stats(A,B,O,T,H,spinup)
+function [AmB,AmBsmooth,OmHB,OmHBsmooth,OmHA,OmHAsmooth,AmT,AmTsmooth,BmT,BmTsmooth,OmHT,OmHTsmooth] = diff_stats(A,B,O,T,H,spinup)
 %DIFF_STATS Diffs between Analysis, Background, Obs, and Truth
 % If we are interested in the variances as well, must do paired
 % differences, not just mean differences, to account for correlation
@@ -32,5 +32,26 @@ OmHA = mean(O - H*ensmA,2); % Nobs x 1
 AmT = mean(ensmA - T, 2); % Nx x 1
 BmT = mean(ensmB - T,2); % Nx x 1
 OmHT = mean(O - H*T,2); % Nobs x 1
+
+%% Caluculate cyclical smoothed mean differences for BC purposes
+AmBhat = [AmB(Nx-10:Nx,:);AmB;AmB(1:10,:)];
+OmHBhat = [OmHB(Nx-10:Nx,:);OmHB;OmHB(1:10,:)];
+OmHAhat = [OmHA(Nx-10:Nx,:);OmHA;OmHA(1:10,:)];
+AmThat = [AmT(Nx-10:Nx,:);AmT;AmT(1:10,:)];
+BmThat = [BmT(Nx-10:Nx,:);BmT;BmT(1:10,:)];
+OmHThat = [OmHT(Nx-10:Nx,:);OmHT;OmHT(1:10,:)];
+
+AmBsmooth = sgolayfilt(AmBhat,9,21);
+AmBsmooth = AmBsmooth(11:Nx+10,:);
+OmHBsmooth = sgolayfilt(OmHBhat,9,21);
+OmHBsmooth = OmHBsmooth(11:Nx+10,:);
+OmHAsmooth = sgolayfilt(OmHAhat,9,21);
+OmHAsmooth = OmHAsmooth(11:Nx+10,:);
+AmTsmooth = sgolayfilt(AmThat,9,21);
+AmTsmooth = AmTsmooth(11:Nx+10,:);
+BmTsmooth = sgolayfilt(BmThat,9,21);
+BmTsmooth = BmTsmooth(11:Nx+10,:);
+OmHTsmooth = sgolayfilt(OmHThat,9,21);
+OmHTsmooth = OmHTsmooth(11:Nx+10,:);
 
 end
