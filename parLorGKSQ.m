@@ -168,7 +168,7 @@ function [Ncycles, first, skip, obs_parms, Kvec, ci,...
         '1.0','0.0','1.0','0','0',...
         '[500]','[0.95]','[1.20]',...
         '0.05','00000','10','g',...
-        '[160]','1','1'};
+        '[160]','1','0'};
     answer=inputdlg(prompt,name,numlines,default);i=1;
     % Number of cycles to run
     Ncycles = str2num(answer{i});i=i+1;
@@ -252,15 +252,19 @@ end
 function AmB = load_simobs_bias_correction()
     % Can e.g. add long-term mean of analysis minus background here
     [fn,pn,~] = uigetfile('K*/diffstat*','Grab A-B');
-    load([pn,fn],'AmB');
+    load([pn,fn],'AmBsmooth');
+    AmB = AmBsmooth;
 end
 
 %% Bias correction for obs
 function OmB = load_obs_bias_correction()
     % Subtract from ob the mean of O-B from previous obs bias run with
-    % perfect(i.e. identical model params e.g. forcing) model and no bias correction
+    % perfect(i.e. identical model params e.g. forcing) model and no bias
+    % correction (?)
+    % At some point, integrate O-A functionality here (or elsewhere)
     [fn,pn,~] = uigetfile('K*/diffstat*','Grab O-B');
-    load([pn,fn],'OmB');
+    load([pn,fn],'OmBsmooth');
+    OmB = OmBsmooth;
 end
 
 %% Parameter adjustment
