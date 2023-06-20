@@ -6,6 +6,7 @@ function [AmB,AmBsmooth,OmHB,OmHBsmooth,OmHA,OmHAsmooth,AmT,AmTsmooth,BmT,BmTsmo
 
 %% Check dimensions of input
 [Nx, ~, Ncycles] = size(A);
+[Nobs] = size(O,1);
 if ~isequal(size(B), size(A))
     error("A and B must have same size, aborting...");
 end
@@ -35,23 +36,23 @@ OmHT = mean(O - H*T,2); % Nobs x 1
 
 %% Caluculate cyclical smoothed mean differences for BC purposes
 AmBhat = [AmB(Nx-10:Nx,:);AmB;AmB(1:10,:)];
-OmHBhat = [OmHB(Nx-10:Nx,:);OmHB;OmHB(1:10,:)];
-OmHAhat = [OmHA(Nx-10:Nx,:);OmHA;OmHA(1:10,:)];
+OmHBhat = [OmHB(Nobs-10:Nobs,:);OmHB;OmHB(1:10,:)];
+OmHAhat = [OmHA(Nobs-10:Nobs,:);OmHA;OmHA(1:10,:)];
 AmThat = [AmT(Nx-10:Nx,:);AmT;AmT(1:10,:)];
 BmThat = [BmT(Nx-10:Nx,:);BmT;BmT(1:10,:)];
-OmHThat = [OmHT(Nx-10:Nx,:);OmHT;OmHT(1:10,:)];
+OmHThat = [OmHT(Nobs-10:Nobs,:);OmHT;OmHT(1:10,:)];
 
 AmBsmooth = sgolayfilt(AmBhat,9,21);
 AmBsmooth = AmBsmooth(11:Nx+10,:);
 OmHBsmooth = sgolayfilt(OmHBhat,9,21);
-OmHBsmooth = OmHBsmooth(11:Nx+10,:);
+OmHBsmooth = OmHBsmooth(11:Nobs+10,:);
 OmHAsmooth = sgolayfilt(OmHAhat,9,21);
-OmHAsmooth = OmHAsmooth(11:Nx+10,:);
+OmHAsmooth = OmHAsmooth(11:Nobs+10,:);
 AmTsmooth = sgolayfilt(AmThat,9,21);
 AmTsmooth = AmTsmooth(11:Nx+10,:);
 BmTsmooth = sgolayfilt(BmThat,9,21);
 BmTsmooth = BmTsmooth(11:Nx+10,:);
 OmHTsmooth = sgolayfilt(OmHThat,9,21);
-OmHTsmooth = OmHTsmooth(11:Nx+10,:);
+OmHTsmooth = OmHTsmooth(11:Nobs+10,:);
 
 end

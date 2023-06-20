@@ -3,7 +3,7 @@
 % Using Lorenz 96 Model I, II or III
 % Global Kalman Square Root filter
 % Bill Campbell
-% Last modified 9/4/2022
+% Last modified 6/16/2023
 
 %% Parameter input
 [Ncycles, first, skip, obs_parms, Kvec, ci, alphavec,...

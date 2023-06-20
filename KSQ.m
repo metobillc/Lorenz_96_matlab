@@ -25,7 +25,8 @@ Xb = sqrt(alpha).*(Zfull - repmat(xb_bar,1,K)); % Nx x K
 % Apply "model bias" correction only to the simulated obs,
 % NOT to the background itself, i.e. leave xb_bar unchanged
 if (bc_simobs == 1)  % Add mean of A - B from another run
-    yb_bar  = H * (xb_bar + obs_parms.AmB); % Nobs x 1
+    %yb_bar  = H * (xb_bar + obs_parms.AmB); % Nobs x 1
+    yb_bar  = H * (xb_bar - obs_parms.AmB); % Nobs x 1  %Knisely
 else
     yb_bar = H * xb_bar; % Nobs x 1
 end
