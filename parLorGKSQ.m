@@ -13,6 +13,7 @@ fprintf('Started: %s\n',start);
 [infolder, run] = get_run_parms();
 % Guard against overwriting
 outfolder = create_outfolder(infolder, run);
+run.outfolder = outfolder;
 
 %% Nature run
 % Optional compatible observations from file,
@@ -29,13 +30,14 @@ Xt = Xt(:, nature.spinup+1:end); % discard nature run spinup
 % Default is the same as the nature run
 % Deviation from default introduces model bias
 % model: K,F,I,b,c,timestep,abstol,reltol,type
+% Allow experiments with parameters that differ from the nature run parameters
 model = get_model_parms(nature);
 
 %% DA parameters
 % da: cycle_skip,K,ci,spinup,alpha,loctype,locstr,locrad
 da = get_da_parms();
 % Make output folder for this ensemble size if needed
-ensout = fullfile(outfolder,['K',num2str(da.K,'%d')]);
+ensout = fullfile(run.outfolder,['K',num2str(da.K,'%d')]);
 if ~exist(ensout,'dir')
     mkdir(ensout);
 end
@@ -68,9 +70,9 @@ if run.use_obs_file
         y = y(:,1:run.Ncycles);  % Nobs x Ncycles
     end
 else
-    y0 = observe_truth(Xt, H, R, obs);
+    y0 = observe_truth(Xt, H, R, obs); % Nx x Ncycles
     % Construct imperfect obs
-    y = apply_obs_bias(y0, obs);
+    y = apply_obs_bias(y0, obs); % Nx x Ncycles
 end
 
 %% Bias correction parameters
