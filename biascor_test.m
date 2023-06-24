@@ -53,9 +53,12 @@ function biascor = fakeDA(y0,Xt,H,biascor,outfolder)
     y = fakeKSQ(y0,biascor);
     % Time mean ensemble means of differences
     OmHB = fake_diff_stats(y,Xt,H);
-    % Always save the following stats
-    statsfile = fullfile(outfolder,'biascor_test_output_diffstats.mat');
-    save(statsfile,'OmHB','-v7.3');
+    % Obs locations
+    obs_locs_post = biascor.obs_locs_post;
+    % Always save the following stats for future bias correction
+    statsfile = fullfile(outfolder,'every_other',...
+        'biascor_test_output_diffstats.mat');
+    save(statsfile,'obs_locs_post','OmHB','-v7.3');
 end
 function y = fakeKSQ(y0, biascor)
     % Apply obs bias correction directly to obs
