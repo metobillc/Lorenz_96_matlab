@@ -129,7 +129,7 @@ end
 %% Bias the true obs
 function ybias = apply_bias(yt, obs)
     % Multiplicative, then additive
-    ybias = yt .* obs.bias_fac;
+    ybias = yt .* obs.biasfac;
     ybias = ybias + obs.bias;
 end
 
