@@ -2,10 +2,10 @@ function [Nobs,H,R,varargout] = forward(oblist,rlist)
 % R is always diagonal, we can relax this assumption later.
 % May not observe every gridpoint, so 
 % H will be 1 where oblist is 1, 0 otherwise
-Nobsall = length(oblist);
+Nobsall = length(oblist);  % Typically Nobsall == Nx (number of gridpoints)
 idx = find(oblist);
 Nobs = length(idx);
-H = zeros(Nobs,Nobsall);
+H = zeros(Nobs,Nobsall);  % Typically Nobs x Nx
 for i=1:Nobs
     H(i,idx(i))=oblist(idx(i));
 end
