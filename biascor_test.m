@@ -65,12 +65,12 @@ function y = fakeKSQ(y0, biascor)
         y = y0 - ycor;
     end
 end
-function OmHB = fake_diff_stats(O,B,H)
-    if ~isequal(size(O), size(H*B))
-        error("O and H*B must have same size, aborting...");
+function OmHB = fake_diff_stats(y,Xt,H)
+    if ~isequal(size(y), size(H*Xt))
+        error("y and H*Xt must have same size, aborting...");
     end
-    ensmB = squeeze(mean(B,2)); % Nx x Ncycles
-    OmHB = mean(O - H*ensmB,2); % Nobs x 1
+    Xtbar = squeeze(mean(Xt,2)); % Nx x 1
+    OmHB = mean(y - H*Xtbar,2); % Nobs x 1
 end
 
 %% Observation parameters input
