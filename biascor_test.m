@@ -153,7 +153,7 @@ function biascor = interpolate(Nx, allvars, biascor)
     ombprior = false;
     if isfield(allvars, 'OmB')
         ombprior = true;
-        biascor.OmB_prior = allvars.OmB;
+        biascor.OmB_prior = allvars.OmB(:);
         Nx_prior = length(biascor.OmB_prior);
         if Nx_prior ~= Nx
             error('OmB length is %d, should be %d, aborting.\n',...
@@ -162,16 +162,16 @@ function biascor = interpolate(Nx, allvars, biascor)
     end
     % Next look for OmHB_prior
     if isfield(allvars, 'OmHB_prior')
-        biascor.OmHB_prior = allvars.OmHB_prior;
+        biascor.OmHB_prior = allvars.OmHB_prior(:);
     elseif isfield(allvars,'OmHB')
-        biascor.OmHB_prior = allvars.OmHB;
+        biascor.OmHB_prior = allvars.OmHB(:);
     elseif ombprior
-        biascor.OmHB_prior = biascor.OmB_prior;
+        biascor.OmHB_prior = biascor.OmB_prior(:);
     else  % Default to zero bias correction
         print('None of OmHB_prior, OmHB, and OmB found, defaulting to 0.\n')
         biascor.OmHB_prior = zeros(Nx,1);
         biascor.OmB_prior = zeros(Nx,1);
-        biascor.obs_locs = (1:Nx)';
+        biascor.obs_locs_prior = (1:Nx);
     end
     Nobs = length(biascor.OmHB_prior);
 
@@ -182,23 +182,23 @@ function biascor = interpolate(Nx, allvars, biascor)
             error('OmHB_prior length=%d incompatible with obs_locs length=%d, aborting.\n',...
                    Nobs,Nlocs);
         end
-        biascor.obs_locs = allvars.obs_locs;
+        biascor.obs_locs_prior = allvars.obs_locs(:)';
     else  % Nobs is length(allvars.OmHB)
         if Nobs < Nx
             first = biascor.obs_locs_post(1);
-            biascor.obs_locs = infer_obs_locs(Nobs, Nx, first);
+            biascor.obs_locs_prior = infer_obs_locs(Nobs, Nx, first);
         else
-            biascor.obs_locs = (1:Nx)';
+            biascor.obs_locs_prior = (1:Nx);
         end
-        Nlocs = length(biascor.obs_locs);
+        Nlocs = length(biascor.obs_locs_prior);
     end
     % Now get biascor.OmB using obs_locs
     if Nlocs ~= Nx
-        % Periodic cubic spline fit on the obs_locs grid
+        % Periodic cubic spline fit on the obs_locs_prior grid
         % csape requires Curve Fitting Toolbox
-        pp = csape(biascor.obs_locs, biascor.OmHB_prior, 'periodic');
+        pp = csape(biascor.obs_locs_prior, biascor.OmHB_prior, 'periodic');
         % Evaluate spline on full grid
-        biascor.OmB = fnval(pp, 1:Nx);
+        biascor.OmB = fnval(pp, (1:Nx)');
     else
         biascor.OmB = biascor.OmHB_prior;
     end
@@ -211,10 +211,10 @@ function biascor = apply_sgolay(biascor)
     order = 9;
     framelen = 21;
     biascor.innov_smoother_parms = [order,framelen];
-    biascor.OmHB_sg = circ_sg_filt(biascor.OmHB_prior, order, framelen);
+    biascor.OmHB_sg_prior = circ_sg_filt(biascor.OmHB_prior, order, framelen);
     % Downscale to full grid by periodic cubic spline fit to the
     % sg-filtered state on the coarse grid
-    pp = csape(biascor.obs_locs, biascor.OmHB_sg, 'periodic');
+    pp = csape(biascor.obs_locs_prior, biascor.OmHB_sg_prior, 'periodic');
     % Evaluate spline on full grid
-    biascor.OmHB_sg_post = fnval(pp, biascor.obs_locs_post);
+    biascor.OmHB_sg_post = fnval(pp, biascor.obs_locs_post');
 end
