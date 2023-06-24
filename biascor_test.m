@@ -25,10 +25,12 @@ Nx = size(Xt,1);
 [H, R, Rhat, obs_locs_post] = get_forward_model(Nx, obs);
 % Note that the true oberr (R) is used for the obs, and Rhat will be
 % used in the DA step
-yt = observe_truth(Xt, H, R, obs.seed);
+
+%% 5) Draw obs and apply current bias
+yt = observe_truth(Xt, H, R, obs.seed);  % Nobs x Ncycles
 y0 = apply_bias(yt, obs);
 
-%% 5) Bias corrections from stats files
+%% 6) Get and smooth statistical bias corrections from previous run
 % biascor: OmHB_prior,fname_OmHB_prior
 biascor.obs = true;
 biascor.obs_locs_post = obs_locs_post;
@@ -36,14 +38,14 @@ biascor = get_bias_corrections(Nx, outfolder, biascor);
 % Apply smoothers to innovations used for bias correction
 biascor = apply_sgolay(biascor);
 
-%% 6) Parameters diagnostic print and save
+%% 7) Parameters diagnostic print and save
 fprintf('Parms values:\n');
 display(obs);
 display(biascor);
 parmfile = fullfile(outfolder,'biascor_test_parms.mat');
 save(parmfile,'obs','biascor');
 
-%% 7) Fake DA run
+%% 8) Fake DA run
 biascor = fakeDA(y0,Xt,H,biascor,outfolder);
 
 %% Fake DA routines
@@ -109,7 +111,7 @@ function [H, R, Rhat, obs_locs] = get_forward_model(Nx, obs)
     rlist_true(gmask) = obs.err_true;
     rlist_assumed(gmask) = obs.err_assumed;
     % Set up observation operator and ob error covariance matrix
-    % H will be Nobs x Nx, R will be Nobs x Nobs, Nobs <= Nx
+    % H will be Nobs x Nx, R and Rhat will be Nobs x Nobs, Nobs <= Nx
     [~, H, R, obs_locs] = forward(oblist, rlist_true);
     [~, ~, Rhat] = forward(oblist, rlist_assumed);
 end
