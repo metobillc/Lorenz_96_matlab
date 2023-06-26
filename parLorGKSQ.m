@@ -326,11 +326,11 @@ function biascor = get_bias_correction_parms()
              '0'};
     answer=inputdlg(prompt,name,numlines,default,opts);i=1;
     % apply bias correction to obs
-    biascor.obs = logical(str2double(answer{i}));i=i+1;
+    biascor.apply_to_obs = logical(str2double(answer{i}));i=i+1;
     % apply bias correction to model (and therefore simulated obs)
-    biascor.model = logical(str2double(answer{i}));i=i+1;
+    biascor.apply_to_model = logical(str2double(answer{i}));i=i+1;
     % apply bias correction ONLY to simulated obs, not model
-    biascor.simobs_only = logical(str2double(answer{i}));
+    biascor.apply_to_simobs_only = logical(str2double(answer{i}));
 end
 
 %% Bias corrections input
@@ -430,7 +430,7 @@ end
 %% Apply smoothers to bias correction mean increments, innoavtions
 function biascor = apply_smoothers(biascor)
     % Apply smoother to increments
-    if (biascor.model || biascor.simobs_only)
+    if (biascor.apply_to_model || biascor.apply_to_simobs_only)
         name='Increment Smoother';
         numlines=[1 80];
         opts='on';
@@ -451,7 +451,7 @@ function biascor = apply_smoothers(biascor)
                 biascor.AmB = biascor.AmB_raw;
         end
     end
-    if (biascor.obs)
+    if (biascor.apply_to_obs)
         % Apply smoother to innovationss
         name='Innnovation Smoother';
         numlines=[1 80];
