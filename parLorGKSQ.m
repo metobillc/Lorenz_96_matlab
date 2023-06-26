@@ -59,7 +59,10 @@ end
 
 %% 7) Forward model
 Nx = size(Xt,1);
-[H, R, Rhat] = get_forward_model(Nx, obs);
+[H, R, Rhat, obs_locs_post] = get_forward_model(Nx, obs);
+% NB obs_locs_post is a column vector, want a row vec in structs
+
+%% 8) Load or (draw and apply bias to) observations
 if run.use_obs_file
     y = load_obs(obs.path, obs.file);  % observations consistent with nature run
     y = y(:, nature.spinup+1:end); % must discard same spinup period
@@ -391,7 +394,7 @@ function plot_ensmean_truth(Xt,ensmean,tskip)
 end
 
 %% Observe the true state
-function [H, R, Rhat] = get_forward_model(Nx, obs)
+function [H, R, Rhat, obs_locs] = get_forward_model(Nx, obs)
 % Construct forward operator H, true diagonal obs error covariance R,
 % and assumed obs error covariance Rhat
     oblist = zeros(1,Nx);
@@ -404,7 +407,7 @@ function [H, R, Rhat] = get_forward_model(Nx, obs)
     rlist_assumed(gmask) = obs.err_assumed;
     % Set up observation operator and ob error covariance matrix
     % H will be Nobs x Nx, R will be Nobs x Nobs, Nobs <= Nx
-    [~, H, R] = forward(oblist, rlist_true);
+    [~, H, R, obs_locs] = forward(oblist, rlist_true);
     [~, ~, Rhat] = forward(oblist, rlist_assumed);
 end
 
