@@ -1,4 +1,4 @@
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Biascor test, no model run
 % Bill Campbell
 % Last modified 6/12/2023
@@ -47,6 +47,7 @@ save(parmfile,'obs','biascor');
 
 %% 8) Fake DA run
 biascor = fakeDA(y0,Xt,H,biascor,outfolder);
+% Main code ends here, function definitions below
 
 %% Fake DA routines
 function biascor = fakeDA(y0,Xt,H,biascor,outfolder)
