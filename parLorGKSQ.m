@@ -39,9 +39,7 @@ model = get_model_parms(nature);
 da = get_da_parms();
 % Make output folder for this ensemble size if needed
 ensout = fullfile(run.outfolder,['K',num2str(da.K,'%d')]);
-if ~exist(ensout,'dir')
-    mkdir(ensout);
-end
+[status, msg] = mkdir(ensout);
 
 %% 5) Generate initial ensemble from nature run climatology
 % Equally spaced through time (could randomize this later)
