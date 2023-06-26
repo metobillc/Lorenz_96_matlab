@@ -7,6 +7,7 @@
 
 start = datestr(clock);
 fprintf('Started: %s\n',start);
+RUN_TESTS = 0;
 %% 1) General parameters
 % run: expname,Ncycles,printcycle,use_obs_file,save_state,ring_movie,reserve
 mainfolder = 'D:\Lorenz_96_model';
@@ -75,6 +76,9 @@ else
     yt = observe_truth(Xt, H, R, obs.seed); % Nx x Ncycles
     % Construct imperfect obs
     y = apply_obs_bias(yt, obs); % Nx x Ncycles
+    if RUN_TESTS==1
+        test_apply_obs_bias(y, yt)
+    end
 end
 
 %% 9) Bias correction parameters and corrections from stats files
@@ -84,18 +88,30 @@ biascor = get_bias_correction_parms();
 biascor.obs_locs_post = obs_locs_post;
 if (biascor.apply_to_model || biascor.apply_to_simobs_only)
     biascor = get_model_bias_corrections(infolder, biascor);
+    if RUN_TESTS==1
+        test_model_bias_corrections(biascor);
+    end
 end
 if (biascor.apply_to_obs)
     biascor = get_obs_bias_corrections(Nx, infolder, biascor);
+    if RUN_TESTS==1
+        test_get_obs_bias_corrections(biascor);
+    end
 end
 
 %% 10) Apply smoothers to innovations, increments used for bias correction
 % biascor: AmB, OmB
 if (biascor.apply_to_model || biascor.apply_to_simobs_only)
     biascor = apply_model_smoothers(biascor);
+    if RUN_TESTS==1
+        test_apply_model_smoothers(biascor);
+    end
 end
 if (biascor.apply_to_obs)
     biascor = apply_obs_smoothers(biascor);
+    if RUN_TESTS==1
+        test_apply_obs_smoothers(biascor);
+    end
 end
 
 %% Parameters diagnostic print and save
@@ -587,4 +603,79 @@ function Xsg = circ_sg_filt(X, order, framelen)
     if ~row_output
         Xsg = Xsg(:);
     end
+end
+
+%% Unit tests
+function test_apply_obs_bias(y, yt)
+    h = figure; set(h,'Position',[480,360,600,500]);
+    ybar = mean(y,2); ytbar = mean(yt,2);
+    locs = 1:size(ytbar);
+    plot(locs, ytbar, 'k-', locs, ybar, 'r--'); grid on
+    title('True and Biased Observations')
+    legend('True obs', 'Biased obs'); figure(h);
+    input('Hit Enter key to close figure and continue: ', 's');
+    close(h)
+end
+
+function test_model_bias_corrections(biascor)
+    h = figure; set(h,'Position',[200,250,1000,500]);
+    plot(biascor.AmB,'k-'); grid on; yy = ylim;
+    if yy(1) > 0; yy(1) = 0; end
+    if yy(2) < 0; yy(2) = 0; end
+    ylim(yy);
+    [fpath, fname, ~] = fileparts(biascor.fname_AmB);
+    title({['A - B from ',fpath], fname},'Interpreter','none');
+    legend('AmB'); figure(h);
+    input('Hit Enter key to close figure and continue: ', 's');
+    close(h)
+end
+
+function test_get_obs_bias_corrections(biascor)
+    h = figure; set(h,'Position',[480,360,600,500]);
+    locs = biascor.obs_locs_prior;
+    prior = biascor.OmHB_prior;
+    plot(locs, prior, 'k-', locs, prior, 'r*'); grid on; yy = ylim;
+    if yy(1) > 0; yy(1) = 0; end
+    if yy(2) < 0; yy(2) = 0; end
+    ylim(yy);
+    [fpath, fname, ~] = fileparts(biascor.fname_OmHB_prior);
+    title({['O - H*B from ',fpath], fname},'Interpreter','none');
+    legend('Prior OmHB',''); figure(h);
+    input('Hit Enter key to close figure and continue: ', 's');
+    close(h)
+end
+
+function test_apply_model_smoothers(biascor)
+% biascor.AmB_sg = circ_sg_filt(biascor.AmB, order, framelen);
+    h = figure; set(h,'Position',[200,250,1000,500]);
+    Nx = size(biascor.AmB,1);
+    plot(1:Nx, biascor.AmB, 'b.',...
+        1:Nx, biascor.AmB_smooth_post, 'r-'); grid on; yy = ylim;
+    if yy(1) > 0; yy(1) = 0; end
+    if yy(2) < 0; yy(2) = 0; end
+    ylim(yy);
+    [fpath, fname, ~] = fileparts(biascor.fname_AmB);
+    title({['A - B and Smoothed A - B from ',fpath], fname},...
+        'Interpreter','none');
+    legend('AmB','Smooth AmB'); figure(h);
+    input('Hit Enter key to close figure and continue: ', 's');
+    close(h)
+end
+
+function test_apply_obs_smoothers(biascor)
+    h = figure; set(h,'Position',[480,360,600,500]);
+    prior_locs = biascor.obs_locs_prior;
+    prior = biascor.OmHB_smooth_prior;
+    post_locs = biascor.obs_locs_post;
+    post = biascor.OmHB_smooth_post;
+    plot(prior_locs, prior, 'r-', prior_locs, prior, 'r*',...
+        post_locs, post, 'b-', post_locs, post, 'b.'); grid on; yy = ylim;
+    if yy(1) > 0; yy(1) = 0; end
+    if yy(2) < 0; yy(2) = 0; end
+    ylim(yy);
+    [fpath, fname, ~] = fileparts(biascor.fname_OmHB_prior);
+    title({['Smoothed O - H*B, prior and post from ',fpath], fname},'Interpreter','none');
+    legend('Smooth Prior OmHB','','Smooth Post OmHB',''); figure(h);
+    input('Hit Enter key to close figure and continue: ', 's');
+    close(h)
 end
