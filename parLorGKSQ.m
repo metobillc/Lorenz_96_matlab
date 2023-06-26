@@ -73,9 +73,9 @@ if run.use_obs_file
         y = y(:,1:run.Ncycles);  % Nobs x Ncycles
     end
 else
-    y0 = observe_truth(Xt, H, R, obs); % Nx x Ncycles
+    yt = observe_truth(Xt, H, R, obs.seed); % Nx x Ncycles
     % Construct imperfect obs
-    y = apply_obs_bias(y0, obs); % Nx x Ncycles
+    y = apply_obs_bias(yt, obs); % Nx x Ncycles
 end
 
 %% 9) Bias correction parameters and corrections from stats files
@@ -412,12 +412,12 @@ function [H, R, Rhat, obs_locs] = get_forward_model(Nx, obs)
 end
 
 %% Observe the true state
-function y0 = observe_truth(Xt, H, R, obs)
+function y0 = observe_truth(Xt, H, R, seed)
     % Create simulated obs with error covariance R and forward model H
     Rsqrt = chol(R, 'lower'); % R need not be diagonal
     Ncycles = size(Xt,2);
     Nobs = size(R,1);
-    rng(obs.seed,'twister');
+    rng(seed,'twister');
     y0 = H * Xt + Rsqrt * randn(Nobs, Ncycles);
 end
 
