@@ -3,11 +3,10 @@
 % Using Lorenz 96 Model I, II or III
 % Global Kalman Square Root filter
 % Bill Campbell
-% Last modified 6/24/2023
+% Last modified 6/26/2023
 
 start = datestr(clock);
 fprintf('Started: %s\n',start);
-
 %% 1) General parameters
 % run: expname,Ncycles,printcycle,use_obs_file,save_state,ring_movie,reserve
 mainfolder = 'D:\Lorenz_96_model';
@@ -82,12 +81,15 @@ end
 % biascor: obs,model,simobs_only,innov_smoother,innov_smoother_parms,
 %         incr_smoother,incr_smoother_parms
 biascor = get_bias_correction_parms();
+biascor.obs_locs_post = obs_locs_post;
+if (biascor.apply_to_model || biascor.apply_to_simobs_only)
+    biascor = get_model_bias_corrections(infolder, biascor);
+end
+if (biascor.apply_to_obs)
+    biascor = get_obs_bias_corrections(Nx, infolder, biascor);
+end
 
-%% Bias corrections from stats files
-% biascor: AmB_raw,OmB_raw,fname_AmB_raw,fname_OmB_raw
-biascor = get_bias_corrections(outfolder, biascor);
-
-%% Apply smoothers to raw increments, innovations used for bias correction
+%% 10) Apply smoothers to innovations, increments used for bias correction
 % biascor: AmB, OmB
 biascor = apply_smoothers(biascor);
 
@@ -125,10 +127,8 @@ end
 %% Output file listing
 fprintf('Run output is in %s:\n',ensout);
 dir(fullfile(ensout,[run.expname,'*']))
-
 finish = datestr(clock);
 fprintf('Started: %s\nFinished: %s\n',start,finish);
-
 
 %% General run input
 function [infolder, run] = get_run_parms(mainfolder)
@@ -333,25 +333,85 @@ function biascor = get_bias_correction_parms()
     biascor.apply_to_simobs_only = logical(str2double(answer{i}));
 end
 
-%% Bias corrections input
-function biascor = get_bias_corrections(outfolder, biascor)
-    fname = fullfile(outfolder,'K*','diffstat*');
+%% Model stats bias corrections input
+function biascor = get_model_bias_corrections(infolder, biascor)
+    fname = fullfile(infolder,'*diffstat*');
     % Load bias corrections for model and/or for simulated obs
-    if (biascor.model || biascor.simobs_only)
-        % Can e.g. add long-term mean of analysis minus background here
-        [fn,pn] = uigetfile(fname,'Grab A-B');
-        load([pn,fn],'AmB');
-        biascor.AmB_raw = AmB;
-        biascor.fname_AmB_raw = fullfile(pn,fn);
-    end
+    % Can e.g. add long-term mean of analysis minus background here
+    [fn,pn] = uigetfile(fname,'Grab A-B');
+    load([pn,fn],'AmB');
+    biascor.AmB = AmB;
+    biascor.fname_AmB = fullfile(pn,fn);
+end
+
+%% Obs stats bias correction input
+function biascor = get_obs_bias_corrections(Nx, infolder, biascor)
+    fname = fullfile(infolder,'*diffstat*');
     % Load bias corrections for obs
-    if (biascor.obs)
-        % Subtract from ob the mean of O-B from previous obs bias run with
-        % perfect(i.e. identical model params e.g. forcing) model and no bias correction
-        [fn,pn] = uigetfile(fname,'Grab O-B');
-        load([pn,fn],'OmHB');
-        biascor.OmB_raw = OmHB;
-        biascor.fname_OmB_raw = fullfile(pn,fn);
+    % Subtract from ob the mean of O-B from previous obs bias run with
+    % perfect(i.e. identical model params e.g. forcing) model and no bias correction
+    [fn,pn] = uigetfile(fname,'Grab O-B');
+    % from biascor_test.m
+    biascor.fname_OmHB_prior = fullfile(pn,fn);
+    % Load bias corrections for obs
+    allvars = load([pn,fn]);
+    biascor = bias_interpolate(Nx, allvars, biascor);
+end
+
+%% Get OmHB_prior, OmB_prior, and obs_locs
+function biascor = bias_interpolate(Nx, allvars, biascor)
+    % First look for full-sized OmB
+    ombprior = false;
+    if isfield(allvars, 'OmB')
+        ombprior = true;
+        biascor.OmB_prior = allvars.OmB(:);
+        Nx_prior = length(biascor.OmB_prior);
+        if Nx_prior ~= Nx
+            error('OmB length is %d, should be %d, aborting.\n',...
+                  Nx_prior,Nx);
+        end
+    end
+    % Next look for OmHB_prior
+    if isfield(allvars, 'OmHB_prior')
+        biascor.OmHB_prior = allvars.OmHB_prior(:);
+    elseif isfield(allvars,'OmHB')
+        biascor.OmHB_prior = allvars.OmHB(:);
+    elseif ombprior
+        biascor.OmHB_prior = biascor.OmB_prior(:);
+    else  % Default to zero bias correction
+        print('None of OmHB_prior, OmHB, and OmB found, defaulting to 0.\n')
+        biascor.OmHB_prior = zeros(Nx,1);
+        biascor.OmB_prior = zeros(Nx,1);
+        biascor.obs_locs_prior = (1:Nx);
+    end
+    Nobs = length(biascor.OmHB_prior);
+
+    % Find index of obs locations (stored or inferred)
+    if isfield(allvars, 'obs_locs')
+        Nlocs = length(allvars.obs_locs);
+        if Nobs ~= Nlocs
+            error('OmHB_prior length=%d incompatible with obs_locs length=%d, aborting.\n',...
+                   Nobs,Nlocs);
+        end
+        biascor.obs_locs_prior = allvars.obs_locs(:)';
+    else  % Nobs is length(allvars.OmHB)
+        if Nobs < Nx
+            first = biascor.obs_locs_post(1);
+            biascor.obs_locs_prior = infer_obs_locs(Nobs, Nx, first);
+        else
+            biascor.obs_locs_prior = (1:Nx);
+        end
+        Nlocs = length(biascor.obs_locs_prior);
+    end
+    % Now get biascor.OmB using obs_locs
+    if Nlocs ~= Nx
+        % Periodic cubic spline fit on the obs_locs_prior grid
+        % csape requires Curve Fitting Toolbox
+        pp = csape(biascor.obs_locs_prior, biascor.OmHB_prior, 'periodic');
+        % Evaluate spline on full grid
+        biascor.OmB = fnval(pp, (1:Nx)');
+    else
+        biascor.OmB = biascor.OmHB_prior;
     end
 end
 
