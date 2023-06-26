@@ -91,7 +91,12 @@ end
 
 %% 10) Apply smoothers to innovations, increments used for bias correction
 % biascor: AmB, OmB
-biascor = apply_smoothers(biascor);
+if (biascor.apply_to_model || biascor.apply_to_simobs_only)
+    biascor = apply_model_smoothers(biascor);
+end
+if (biascor.apply_to_obs)
+    biascor = apply_obs_smoothers(biascor);
+end
 
 %% Parameters diagnostic print and save
 fprintf('Parms values:\n');
@@ -487,51 +492,64 @@ function y = apply_obs_bias(y0, obs)
    y = y0.*obs.biasfac + obs.bias;
 end
 
-%% Apply smoothers to bias correction mean increments, innoavtions
-function biascor = apply_smoothers(biascor)
+%% Apply smoothers to bias correction mean increments, innovations
+function biascor = apply_model_smoothers(biascor)
     % Apply smoother to increments
-    if (biascor.apply_to_model || biascor.apply_to_simobs_only)
-        name='Increment Smoother';
-        numlines=[1 80];
-        opts='on';
-        prompt={'Smoother type','Smoother parmlist',};
-        default={'Savitzky-Golay','[9, 21]'};
-        answer=inputdlg(prompt,name,numlines,default,opts);i=1;
-        switch lower(answer{i})
-            case {'savitzky-golay','savitzky_golay','savgolay','sg'}
-                biascor.incr_smoother = answer{i};i=i+1;
-                biascor.incr_smoother_parms = str2num(answer{i});
-                % Apply periodic savitzky-golay filter
-                order = biascor.incr_smoother_parms(1);
-                framelen = biascor.incr_smoother_parms(2);
-                biascor.AmB = circ_sg_filt(biascor.AmB_raw, order, framelen);
-            otherwise
-                biascor.incr_smoother = 'none';
-                biascor.incr_smoother_parms = [];
-                biascor.AmB = biascor.AmB_raw;
-        end
+    name='Increment Smoother';
+    numlines=[1 80];
+    opts='on';
+    prompt={'Smoother type','Smoother parmlist',};
+    default={'Savitzky-Golay','[9, 21]'};
+    answer=inputdlg(prompt,name,numlines,default,opts);i=1;
+    switch lower(answer{i})
+        case {'savitzky-golay','savitzky_golay','savgolay','sg'}
+            biascor.incr_smoother = answer{i};i=i+1;
+            biascor.incr_smoother_parms = str2num(answer{i});
+            % Apply periodic savitzky-golay filter
+            order = biascor.incr_smoother_parms(1);
+            framelen = biascor.incr_smoother_parms(2);
+            biascor.AmB_smooth_post = circ_sg_filt(biascor.AmB, order, framelen);
+        otherwise
+            biascor.incr_smoother = 'none';
+            biascor.incr_smoother_parms = [];
+            biascor.AmB_smooth_post = biascor.AmB;
     end
-    if (biascor.apply_to_obs)
-        % Apply smoother to innovationss
-        name='Innnovation Smoother';
-        numlines=[1 80];
-        opts='on';
-        prompt={'Smoother type','Smoother parmlist',};
-        default={'Savitzky-Golay','[9, 21]'};
-        answer=inputdlg(prompt,name,numlines,default,opts);i=1;
-        switch lower(answer{i})
-            case {'savitzky-golay','savitzky_golay','sgolay','sg'}
-                biascor.innov_smoother = answer{i};i=i+1;
-                biascor.innov_smoother_parms = str2num(answer{i});
-                % Apply periodic savitzky-golay filter
-                order = biascor.innov_smoother_parms(1);
-                framelen = biascor.innov_smoother_parms(2);
-                biascor.OmHB = circ_sg_filt(biascor.OmHB_raw, order, framelen);
-            otherwise
-                biascor.innov_smoother = 'none';
-                biascor.innov_smoother_parms = [];
-                biascor.OmHB = biascor.OmHB_raw;
-        end
+end
+
+function biascor = apply_obs_smoothers(biascor)
+% Needs a rewrite following biascor_test
+    % Apply smoother to innovationss
+    name='Innnovation Smoother';
+    numlines=[1 80];
+    opts='on';
+    prompt={'Smoother type','Smoother parmlist',};
+    default={'Savitzky-Golay','[9, 21]'};
+    answer=inputdlg(prompt,name,numlines,default,opts);i=1;
+    switch lower(answer{i})
+        case {'savitzky-golay','savitzky_golay','sgolay','sg'}
+            biascor.innov_smoother = answer{i};i=i+1;
+            biascor.innov_smoother_parms = str2num(answer{i});
+            % Apply periodic savitzky-golay filter
+            order = biascor.innov_smoother_parms(1);
+            framelen = biascor.innov_smoother_parms(2);
+            biascor.OmHB_smooth_prior = circ_sg_filt(biascor.OmHB_prior,...
+                order, framelen);
+            % Downscale to full grid by periodic cubic spline fit to the
+            % sg-filtered state on the coarse grid
+            pp = csape(biascor.obs_locs_prior, biascor.OmHB_smooth_prior,...
+                'periodic');
+            % Evaluate spline on full grid
+            biascor.OmHB_smooth_post = fnval(pp, biascor.obs_locs_post');
+        otherwise  % Periodic cubic spline is the default downscaler
+            biascor.innov_smoother = 'periodic_cubic_spline';
+            biascor.innov_smoother_parms = [];
+            biascor.OmHB_smooth_prior = biascor.OmHB_prior;
+            % Downscale to full grid by periodic cubic spline fit to the
+            % sg-filtered state on the coarse grid
+            pp = csape(biascor.obs_locs_prior, biascor.OmHB_smooth_prior,...
+                'periodic');
+            % Evaluate spline on full grid
+            biascor.OmHB_smooth_post = fnval(pp, biascor.obs_locs_post');
     end
 end
 
