@@ -2,7 +2,7 @@ function [Xa,score,ensvar,varargout] = KSQ(Zfull,alpha,K,H,R,y,Xt,varargin)
 % Liz Satterfield 10/24/2019
 % Add localization (new parameter)
 % Return prior and posterior error variances along with squared errors
-% Model and obs bias correction by Bill Campbell 9/19/2022
+% Model and obs bias correction by Bill Campbell 6/26/2023
 
 if (nargin > 7)
     CL = varargin{1};
@@ -10,15 +10,15 @@ end
 if (nargin > 8)
     biascor = varargin{2};
 else
-    biascor.obs = false;
-    biascor.simobs_only = false;
-    biascor.model = false;
+    biascor.apply_to_obs = false;
+    biascor.apply_to_simobs_only = false;
+    biascor.apply_to_model = false;
 end
 
 %% Model bias correction
-if biascor.model
+if biascor.apply_to_model
     % Add smoothed mean of A - B from another run to model state
-    Zfull = Zfull + repmat(biascor.AmB,1,K);
+    Zfull = Zfull + repmat(biascor.AmB_smooth_post,1,K);
 end
 
 %% Ensemble Transform Kalman Filter
@@ -26,14 +26,14 @@ xb_bar = mean(Zfull,2); % Nx x 1
 Xb = sqrt(alpha).*(Zfull - repmat(xb_bar,1,K)); % Nx x K
 
 %% Bias correction for obs and simulated obs
-if biascor.simobs_only && ~biascor.model  % Do not correct twice if bc_model true
-    yb_bar  = H * (xb_bar + biascor.AmB); % Nobs x 1
+if biascor.apply_to_simobs_only && ~biascor.apply_to_model  % Do not correct twice if bc_model true
+    yb_bar  = H * (xb_bar + biascor.AmB_smooth_post); % Nobs x 1
 else
     yb_bar = H * xb_bar; % Nobs x 1
 end
 % Apply obs bias correction directly to obs
-if biascor.obs  % Subtract mean of O - H*B from another run
-    y = y - biascor.OmHB;
+if biascor.apply_to_obs  % Subtract mean of O - H*B from another run
+    y = y - biascor.OmHB_smooth_post;
 end
 
 %% Create and update ensemble
