@@ -1,21 +1,22 @@
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % parLorGKSQ with prior inflation
 % Using Lorenz 96 Model I, II or III
 % Global Kalman Square Root filter
 % Bill Campbell
-% Last modified 9/21/2022
+% Last modified 6/24/2023
 
 start = datestr(clock);
 fprintf('Started: %s\n',start);
 
-%% General parameters
+%% 1) General parameters
 % run: expname,Ncycles,printcycle,use_obs_file,save_state,ring_movie,reserve
-[infolder, run] = get_run_parms();
+mainfolder = 'D:\Lorenz_96_model';
+[infolder, run] = get_run_parms(mainfolder);
 % Guard against overwriting
 outfolder = create_outfolder(infolder, run);
 run.outfolder = outfolder;
 
-%% Nature run
+%% 2) Nature run
 % Optional compatible observations from file,
 % otherwise will draw obs as needed
 % nature: ftruth,truepath,fobs,obspath,
@@ -26,14 +27,14 @@ nature = get_nature_run_info(infolder, run.use_obs_file);
     load_truth(nature.truepath, nature.ftruth);
 Xt = Xt(:, nature.spinup+1:end); % discard nature run spinup
 
-%% Model parameters
+%% 3) Model parameters
 % Default is the same as the nature run
 % Deviation from default introduces model bias
 % model: K,F,I,b,c,timestep,abstol,reltol,type
 % Allow experiments with parameters that differ from the nature run parameters
 model = get_model_parms(nature);
 
-%% DA parameters
+%% 4) DA parameters
 % da: cycle_skip,K,ci,spinup,alpha,loctype,locstr,locrad
 da = get_da_parms();
 % Make output folder for this ensemble size if needed
@@ -42,22 +43,23 @@ if ~exist(ensout,'dir')
     mkdir(ensout);
 end
 
-%% Generate initial ensemble from nature run climatology
+%% 5) Generate initial ensemble from nature run climatology
 % Equally spaced through time (could randomize this later)
 ics = floor(linspace(1,size(Xt,2),da.K+1)); % K x 1
 XIC = Xt(:,ics(2:end)); % Nx x K
 % Now can discard unneeded cycles
 Xt = Xt(:,1:run.Ncycles);  % Nx x Ncycles
 
-%% Observation parameters
+%% 6)  Observation parameters
 % obs: seed,first,skip,err_true,err_assumed,bias,biasfac
 obs = get_obs_parms();
 if run.use_obs_file
+    % What if nature.fobs has different obs params? Should they be loaded?
     obs.path = nature.obspath;
     obs.file = nature.fobs;
 end
 
-%% Forward model and observations drawn from file or constructed
+%% 7) Forward model
 Nx = size(Xt,1);
 [H, R, Rhat] = get_forward_model(Nx, obs);
 if run.use_obs_file
@@ -75,9 +77,9 @@ else
     y = apply_obs_bias(y0, obs); % Nx x Ncycles
 end
 
-%% Bias correction parameters
+%% 9) Bias correction parameters and corrections from stats files
 % biascor: obs,model,simobs_only,innov_smoother,innov_smoother_parms,
-%          incr_smoother,incr_smoother_parms
+%         incr_smoother,incr_smoother_parms
 biascor = get_bias_correction_parms();
 
 %% Bias corrections from stats files
@@ -128,9 +130,10 @@ fprintf('Started: %s\nFinished: %s\n',start,finish);
 
 
 %% General run input
-function [infolder, run] = get_run_parms()
+function [infolder, run] = get_run_parms(mainfolder)
     % Get general parameters for the run
-    infolder = uigetdir('..','Choose output folder:');
+    infolder = uigetdir(mainfolder,...
+        'Choose output folder with Experiments subfolder:');
     name='Run Input';
     numlines=[1 120];
     opts='on';
