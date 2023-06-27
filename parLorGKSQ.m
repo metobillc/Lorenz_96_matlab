@@ -8,6 +8,7 @@
 start = datestr(clock);
 fprintf('Started: %s\n',start);
 RUN_TESTS = 0;
+
 %% 1) General parameters
 % run: expname,Ncycles,printcycle,use_obs_file,save_state,ring_movie,reserve
 mainfolder = 'D:\Lorenz_96_model';
@@ -76,9 +77,7 @@ else
     yt = observe_truth(Xt, H, R, obs.seed); % Nx x Ncycles
     % Construct imperfect obs
     y = apply_obs_bias(yt, obs); % Nx x Ncycles
-    if RUN_TESTS==1
-        test_apply_obs_bias(y, yt)
-    end
+    if RUN_TESTS==1; test_apply_obs_bias(y, yt); end
 end
 
 %% 9) Bias correction parameters and corrections from stats files
@@ -88,30 +87,22 @@ biascor = get_bias_correction_parms();
 biascor.obs_locs_post = obs_locs_post;
 if (biascor.apply_to_model || biascor.apply_to_simobs_only)
     biascor = get_model_bias_corrections(infolder, biascor);
-    if RUN_TESTS==1
-        test_model_bias_corrections(biascor);
-    end
+    if RUN_TESTS==1; test_model_bias_corrections(biascor); end
 end
 if (biascor.apply_to_obs)
     biascor = get_obs_bias_corrections(Nx, infolder, biascor);
-    if RUN_TESTS==1
-        test_get_obs_bias_corrections(biascor);
-    end
+    if RUN_TESTS==1; test_get_obs_bias_corrections(biascor); end
 end
 
 %% 10) Apply smoothers to innovations, increments used for bias correction
 % biascor: AmB, OmB
 if (biascor.apply_to_model || biascor.apply_to_simobs_only)
     biascor = apply_model_smoothers(biascor);
-    if RUN_TESTS==1
-        test_apply_model_smoothers(biascor);
-    end
+    if RUN_TESTS==1; test_apply_model_smoothers(biascor); end
 end
 if (biascor.apply_to_obs)
     biascor = apply_obs_smoothers(biascor);
-    if RUN_TESTS==1
-        test_apply_obs_smoothers(biascor);
-    end
+    if RUN_TESTS==1; test_apply_obs_smoothers(biascor); end
 end
 
 %% Parameters diagnostic print and save
@@ -141,8 +132,7 @@ fprintf('(Posterior varMSE %7.5f, %4.1f%% due to squared bias)\n',...
 
 %% Plot time series of truth and ensemble mean
 if run.ring_movie
-    tskip = 4; % One ringplot per day
-    plot_ensmean_truth(Xt,ensmean,tskip)
+    plot_ensmean_truth(Xt,ensmean,run.ring_movie_frame_rate)
 end
 
 %% Output file listing
@@ -160,9 +150,9 @@ function [infolder, run] = get_run_parms(mainfolder)
     numlines=[1 120];
     opts='on';
     prompt={'Experiment Name','Cycles (4/dy)','Cycles per print','Use obs file',...
-            'Save state','Ring movie','Reserved procs'};
+            'Save state','Ring movie','Frame rate (4=1/dy)','Reserved procs'};
     default={'Refactor_test','416','25','0',...
-             '0','1','1'};
+             '0','1','12','4'};
     answer=inputdlg(prompt,name,numlines,default,opts);i=1;
     % Unique experiment name
     run.expname = answer{i};i=i+1;
@@ -176,6 +166,8 @@ function [infolder, run] = get_run_parms(mainfolder)
     run.save_state = logical(str2double(answer{i}));i=i+1;
     % Display ring movie at end of run
     run.ring_movie = logical(str2double(answer{i}));i=i+1;
+    % Ring movie frame rate
+    run.ring_movie_frame_rate = logical(str2double(answer{i}));i=i+1;
     % Processors to reserve for non-Matlab use
     run.reserve = str2double(answer{i});
 end
@@ -613,8 +605,7 @@ function test_apply_obs_bias(y, yt)
     plot(locs, ytbar, 'k-', locs, ybar, 'r--'); grid on
     title('True and Biased Observations')
     legend('True obs', 'Biased obs'); figure(h);
-    input('Hit Enter key to close figure and continue: ', 's');
-    close(h)
+    reply = input('Hit Enter key to close figure and continue: ', 's');
 end
 
 function test_model_bias_corrections(biascor)
