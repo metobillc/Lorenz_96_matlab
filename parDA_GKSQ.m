@@ -137,7 +137,8 @@ save(errstats,'errKSQ','tmse','tbiassq','stmse','stbiassq');
 ensvarstats = strrep(generic,'generic','ensvarstats');
 save(ensvarstats,'ensvarKSQ','tvarmse','tvarbiassq','stvarmse','stvarbiassq');
 statsfile = strrep(generic,'generic','diffstats');
-save(statsfile,'AmB','OmHB','OmHA','AmT','BmT','OmHT','-v7.3');
+obs_locs = biascor.obs_locs_post;
+save(statsfile,'obs_locs','AmB','OmHB','OmHA','AmT','BmT','OmHT','-v7.3');
 % Optional save obs
 if ~run.use_obs_file
     fprintf('Saving obs (includes spinup)...\n');
