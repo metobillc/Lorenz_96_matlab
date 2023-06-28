@@ -151,7 +151,7 @@ function [infolder, run] = get_run_parms(mainfolder)
     opts='on';
     prompt={'Experiment Name','Cycles (4/dy)','Cycles per print','Use obs file',...
             'Save state','Ring movie','Frame rate (4=1/dy)','Reserved procs'};
-    default={'Refactor_test','416','25','0',...
+    default={'Refactor_test','500','25','0',...
              '0','1','12','4'};
     answer=inputdlg(prompt,name,numlines,default,opts);i=1;
     % Unique experiment name
@@ -167,7 +167,7 @@ function [infolder, run] = get_run_parms(mainfolder)
     % Display ring movie at end of run
     run.ring_movie = logical(str2double(answer{i}));i=i+1;
     % Ring movie frame rate
-    run.ring_movie_frame_rate = logical(str2double(answer{i}));i=i+1;
+    run.ring_movie_frame_rate = str2double(answer{i});i=i+1;
     % Processors to reserve for non-Matlab use
     run.reserve = str2double(answer{i});
 end
@@ -233,7 +233,7 @@ end
 function model = get_model_parms(nature)
     % Allow experiments with parameters that differ from
     % the nature run parameters
-    name='Model Parameters';
+    name='Model Parameters (default to Nature Run)';
     numlines=[1 80];
     opts='on';
     prompt={'K(parm)','I(parm)',...
@@ -263,7 +263,7 @@ function da = get_da_parms()
     opts='on';
     prompt={'Cycle skip','Ensemble size','Confidence level','Spinup',...
             'Prior inflation','Localization type','Localization radius'};
-    default={'1','128','0.95','56',...
+    default={'1','128','0.95','100',...
              '1.64','gc','160'};
     answer=inputdlg(prompt,name,numlines,default,opts);i=1;
     % DA cycle skipping (no obs assimilated)
@@ -310,7 +310,7 @@ function obs = get_obs_parms()
     opts='on';
     prompt={'Seed','First var observed','Grid skip',...
             'True Ob error','Assumed Ob error','Ob bias','Ob bias factor'};
-    default={'4249687','1','1',...
+    default={'4249687','1','4',...
              '1.0','1.0','0.3','1.0'};
     answer=inputdlg(prompt,name,numlines,default,opts);i=1;
     % Seed for rng to draw obs
