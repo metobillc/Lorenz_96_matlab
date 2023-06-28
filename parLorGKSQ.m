@@ -106,13 +106,15 @@ if (biascor.apply_to_obs)
 end
 
 %% Parameters diagnostic print and save
-fprintf('Parms values:\n');
-display(run);
-display(nature);
-display(model);
-display(da);
-display(obs);
-display(biascor);
+if run.verbose==1
+    fprintf('Parms values:\n');
+    display(run);
+    display(nature);
+    display(model);
+    display(da);
+    display(obs);
+    display(biascor);
+end
 parmfile = fullfile(outfolder,...
                     ['K',num2str(da.K,'%d')],...
                     [run.expname,'_parms_GKSQ.mat']);
@@ -149,10 +151,12 @@ function [infolder, run] = get_run_parms(mainfolder)
     name='Run Input';
     numlines=[1 120];
     opts='on';
-    prompt={'Experiment Name','Cycles (4/dy)','Cycles per print','Use obs file',...
-            'Save state','Ring movie','Frame rate (4=1/dy)','Reserved procs'};
-    default={'Refactor_test','500','25','0',...
-             '0','1','12','4'};
+    prompt={'Experiment Name','Cycles (4/dy)','Cycles per print',...
+            'Verbose','Progress plot','Use obs file','Save state',...
+            'Ring movie','Frame rate (4=1/dy)','Reserved procs'};
+    default={'Refactor_test','500','25',...
+             '0','0','0','0',...
+             '0','12','4'};
     answer=inputdlg(prompt,name,numlines,default,opts);i=1;
     % Unique experiment name
     run.expname = answer{i};i=i+1;
@@ -160,6 +164,10 @@ function [infolder, run] = get_run_parms(mainfolder)
     run.Ncycles = str2double(answer{i});i=i+1;
     % Cycles between print/plot of run
     run.printcycle = str2double(answer{i});i=i+1;
+    % Print updates to command window
+    run.verbose = logical(str2double(answer{i}));i=i+1;
+    % Plot results during run
+    run.progress_plot = logical(str2double(answer{i}));i=i+1;
     % Use pre-drawn obs from file
     run.use_obs_file = logical(str2double(answer{i}));i=i+1;
     % Save full time history of state vector

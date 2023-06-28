@@ -36,8 +36,10 @@ scoreKSQ = zeros(Nx*2,Ncycles);
 ensvarKSQ = scoreKSQ;
 errKSQ = scoreKSQ;
 
-fprintf('Cycle = 1 of %d: da.K=%d,model.timestep=%4.2f,da.alpha=%5.3f,seed=%d\n',...
-    Ncycles,da.K,model.timestep,da.alpha,nature.seed);
+if run.verbose==1
+    fprintf('Cycle = 1 of %d: da.K=%d,model.timestep=%4.2f,da.alpha=%5.3f,seed=%d\n',...
+        Ncycles,da.K,model.timestep,da.alpha,nature.seed);
+end
 tstart=tic;
 first = true;
 loranon = @(t, x) circ_lorenz2005(t, x, model);
@@ -66,7 +68,7 @@ for ncycle = 1:Ncycles-1
     XKSQ(:, :, ncycle+1) = XX; % posterior
 
     % Diagnostic output
-    if ~mod(ncycle,run.printcycle) || ncycle==Ncycles-1
+    if run.verbose==1 && (~mod(ncycle,run.printcycle) || ncycle==Ncycles-1)
         % Compute mean value so far
         % Will want to add calculations for ensvar also?
         [time_avg,time_stdev] =...
@@ -89,9 +91,11 @@ for ncycle = 1:Ncycles-1
             ncycle,Ncycles,da.K,model.timestep,da.alpha,nature.seed,telapsed);
         display_results('GKSQ',time_avg.',time_vavg.');
         % First fix plot_results, then add ensvar
-        plot_results(first,ncycle,prior_space_mse_norm,prior_space_varse_norm,...
-                     post_space_mse_norm,post_space_varse_norm,...
-                     Ncycles,run.printcycle,da.ci,da.K);
+        if run.progress_plot==1
+            plot_results(first,ncycle,prior_space_mse_norm,...
+                prior_space_varse_norm,post_space_mse_norm,...
+                post_space_varse_norm,Ncycles,run.printcycle,da.ci,da.K);
+        end
         if first
             t_estimate = Ncycles./run.printcycle.*telapsed;
             thour=floor(t_estimate/3600);
