@@ -640,8 +640,10 @@ function test_apply_obs_bias(y, yt)
     locs = 1:size(ytbar);
     plot(locs, ytbar, 'k-', locs, ybar, 'r--'); grid on
     title('True and Biased Observations')
-    legend('True obs', 'Biased obs'); figure(h);
-    reply = input('Hit Enter key to close figure and continue: ', 's');
+    legend('True obs', 'Biased obs');
+    figure(h);
+    input('Hit Enter key to close figure and continue: ', 's');
+    close(h);
 end
 
 function test_model_bias_corrections(biascor)
@@ -705,7 +707,32 @@ function test_apply_obs_smoothers(biascor)
     ylim(yy);
     [fpath, fname, ~] = fileparts(biascor.fname_OmHB_prior);
     title({['Smoothed O - H*B, prior and post from ',fpath], fname},'Interpreter','none');
-    legend('Smooth Prior OmHB','','Smooth Post OmHB',''); figure(h);
+    legend('Smooth Prior OmHB','','Smooth Post OmHB','');
+    figure(h);
+    input('Hit Enter key to close figure and continue: ', 's');
+    close(h)
+end
+
+function test_get_forward_model(Nx,gmask,oblist,anchor_mask,rlist_true)
+    h = figure; set(h,'Position',[200 200 1200 400]);
+    plot(gmask,rlist_true(gmask),'bx'); hold on; grid on
+    if ~isempty(anchor_mask)
+        plot(anchor_mask,rlist_true(anchor_mask),'rd','MarkerFaceColor','red');
+    end
+    plot(1:Nx,oblist.*rlist_true,'b:'); hold on;
+    xlim([1 Nx]);
+    set(gca,'xtick',[1 get(gca,'xtick') Nx]);
+    ylim([0 1.05*max(rlist_true)]);
+    xlabel('Obs locations');
+    ylabel('Ob error variance');
+    if isempty(anchor_mask)
+        title('Standard Obs Locations and Error Variance');
+        legend('Standard','Location','Best');
+    else
+        title('Standard and Anchor Obs Locations and Error Variance');
+        legend('Standard','Anchor','Location','Best');
+    end
+    figure(h);
     input('Hit Enter key to close figure and continue: ', 's');
     close(h)
 end
