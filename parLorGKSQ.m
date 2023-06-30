@@ -151,11 +151,13 @@ function [infolder, run] = get_run_parms(mainfolder)
     numlines=[1 120];
     opts='on';
     prompt={'Experiment Name','Cycles (4/dy)','Cycles per print',...
-            'Verbose','Progress plot','Use obs file','Save state',...
+            'Verbose','Progress plot','Unit tests',...
+            'Use obs file','Save state',...
             'Ring movie','Frame rate (4=1/dy)','Reserved procs'};
-    default={'Refactor_test','500','25',...
-             '0','0','0','0',...
-             '0','12','4'};
+    default={'mytest','500','25',...
+             '1','1','1',...
+             '0','0',...
+             '1','12','4'};
     answer=inputdlg(prompt,name,numlines,default,opts);i=1;
     % Unique experiment name
     run.expname = answer{i};i=i+1;
@@ -272,7 +274,7 @@ function da = get_da_parms()
     opts='on';
     prompt={'Cycle skip','Ensemble size','Confidence level','Spinup',...
             'Prior inflation','Localization type','Localization radius'};
-    default={'1','128','0.95','100',...
+    default={'1','500','0.95','100',...
              '1.64','gc','160'};
     answer=inputdlg(prompt,name,numlines,default,opts);i=1;
     % DA cycle skipping (no obs assimilated)
@@ -317,10 +319,12 @@ function obs = get_obs_parms()
     name='Obs Parameters';
     numlines=[1 80];
     opts='on';
-    prompt={'Seed','First var observed','Grid skip',...
-            'True Ob error','Assumed Ob error','Ob bias','Ob bias factor'};
-    default={'4249687','1','4',...
-             '1.0','1.0','0.3','1.0'};
+    prompt={'Seed','First var observed','Grid skip','Custom obs_loc string',...
+            'True Ob error','Assumed Ob error','Ob bias','Ob bias factor',...
+            'Anchor obs_loc string', 'Anchor Ob error', 'Anchor Assumed Ob error'};
+    default={'4249687','1','4','[100:4:400 300 600:8:960 960]'...
+             '1.0','1.0','0.3','1.0',...
+             '[100:8:400 400 600:8:960 960]','0.10','0.10'};
     answer=inputdlg(prompt,name,numlines,default,opts);i=1;
     % Seed for rng to draw obs
     obs.seed = str2double(answer{i});i=i+1;
@@ -328,13 +332,20 @@ function obs = get_obs_parms()
     obs.first = str2double(answer{i});i=i+1;
     % Variables skipped (unobserved)
     obs.skip = str2double(answer{i});i=i+1;
+    % Fully customized obs locations
+    obs.custom_locs = unique(str2num(answer{i}));i=i+1;
     % observation error variance
     obs.err_true = str2double(answer{i});i=i+1;
     obs.err_assumed = str2double(answer{i});i=i+1;
     % observation additive bias
     obs.bias = str2double(answer{i});i=i+1;
     % observation multiplicative bias factor
-    obs.biasfac = str2double(answer{i});
+    obs.biasfac = str2double(answer{i});i=i+1;
+    % Fully customized obs locations
+    obs.anchor_locs = unique(str2num(answer{i}));i=i+1;
+    % observation error variance
+    obs.anchor_err_true = str2double(answer{i});i=i+1;
+    obs.anchor_err_assumed = str2double(answer{i});
 end
 
 %% Bias correction parameters input
@@ -344,7 +355,7 @@ function biascor = get_bias_correction_parms()
     opts='on';
     prompt={'Apply BC to obs','Apply BC to model AND simobs',...
             'Apply BC ONLY to simobs'};
-    default={'1','1',...
+    default={'0','0',...
              '0'};
     answer=inputdlg(prompt,name,numlines,default,opts);i=1;
     % apply bias correction to obs
@@ -483,10 +494,23 @@ function [H, R, Rhat, obs_locs] = get_forward_model(Nx, obs, run)
     rlist_true = oblist;
     rlist_assumed = oblist;
     % Observed gridpoints
-    gmask = obs.first:obs.skip:Nx;
+    first = obs.first;
+    skip = obs.skip;
+    gmask = first:skip:Nx;
+    % User-specified obs locations
+    if ~isempty(obs.custom_locs)
+        gmask = obs.custom_locs;
+    end
+    % Extra obs, or obs with different ob error
+    anchor_mask = obs.anchor_locs;
     oblist(gmask) = 1;
     rlist_true(gmask) = obs.err_true;
     rlist_assumed(gmask) = obs.err_assumed;
+    if ~isempty(anchor_mask)
+        oblist(anchor_mask) = 1;
+        rlist_true(anchor_mask) = obs.anchor_err_true;
+        rlist_assumed(anchor_mask) = obs.anchor_err_assumed;
+    end
     % Set up observation operator and ob error covariance matrix
     % H will be Nobs x Nx, R will be Nobs x Nobs, Nobs <= Nx
     [~, H, R, obs_locs] = forward(oblist, rlist_true);
