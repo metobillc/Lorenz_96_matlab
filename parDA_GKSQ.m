@@ -35,6 +35,14 @@ XKSQ(:,:,1) = XX;
 scoreKSQ = zeros(Nx*2,Ncycles);
 ensvarKSQ = scoreKSQ;
 errKSQ = scoreKSQ;
+% Knisely
+if da.filter_small==true
+    small_filter=true;
+    ZZ_small = zeros(Nx,da.K);
+    Ismooth = 30;
+else
+    small_filter=false;
+end
 
 if run.verbose==1
     fprintf('Cycle = 1 of %d: da.K=%d,model.timestep=%4.2f,da.alpha=%5.3f,seed=%d\n',...
@@ -44,6 +52,12 @@ tstart=tic;
 first = true;
 loranon = @(t, x) circ_lorenz2005(t, x, model);
 for ncycle = 1:Ncycles-1
+
+    % add small scale back to posterier before forecast  % Knisely
+    if small_filter==true
+        XX = XX + ZZ_small;
+    end
+
     %%%%%%%%% Global Kalman Square Root
     %%%%%%%% build ensemble members
     parfor kk = 1:da.K
@@ -52,6 +66,11 @@ for ncycle = 1:Ncycles-1
         M0 = XX(:, kk); % posterior ensemble member from previous time step
         [~,M] = ode45(loranon, tsteps, M0, options);
         ZZ(:, kk) = M(end, :).'; % forecast (background) ensemble member, which is input as the prior to the DA routine
+
+        % we filter out small scale from prior before DA, then add it back to posterier afterwards   % Knisely
+        if small_filter==true
+            [ZZ(:, kk),ZZ_small(:, kk)] = filter_small_scale(ZZ(:, kk),Ismooth);
+        end
     end
     ZKSQ(:, :, ncycle+1) = ZZ; % forecast (background) ensemble, which is input as the prior to the DA routine
 

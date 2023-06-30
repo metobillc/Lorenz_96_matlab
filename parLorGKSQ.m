@@ -273,9 +273,10 @@ function da = get_da_parms()
     numlines=[1 80];
     opts='on';
     prompt={'Cycle skip','Ensemble size','Confidence level','Spinup',...
-            'Prior inflation','Localization type','Localization radius'};
+            'Prior inflation','Localization type','Localization radius',...
+            'Filter small-scale activity'};
     default={'1','500','0.95','100',...
-             '1.64','gc','160'};
+             '1.64','gc','160','0'};
     answer=inputdlg(prompt,name,numlines,default,opts);i=1;
     % DA cycle skipping (no obs assimilated)
     da.cycle_skip = str2double(answer{i});i=i+1;
@@ -311,7 +312,10 @@ function da = get_da_parms()
     end
     i=i+1;
     % Localization radius (in gridpoints)
-    da.locrad = abs(round(str2double(answer{i})));
+    da.locrad = abs(round(str2double(answer{i})));i=i+1;
+    % Filter small-scale activity from DA to simulate 
+    % representativeness error
+    da.filter_small = logical(str2double(answer{i}));
 end
 
 %% Observation parameters input
