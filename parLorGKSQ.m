@@ -7,7 +7,6 @@
 
 start = datestr(clock);
 fprintf('Started: %s\n',start);
-RUN_TESTS = 0;
 
 %% 1) General parameters
 % run: expname,Ncycles,printcycle,use_obs_file,save_state,ring_movie,reserve
@@ -60,7 +59,7 @@ end
 
 %% 7) Forward model
 Nx = size(Xt,1);
-[H, R, Rhat, obs_locs_post] = get_forward_model(Nx, obs);
+[H, R, Rhat, obs_locs_post] = get_forward_model(Nx, obs, run);
 % NB obs_locs_post is a column vector, want a row vec in structs
 
 %% 8) Load or (draw and apply bias to) observations
@@ -77,7 +76,7 @@ else
     yt = observe_truth(Xt, H, R, obs.seed); % Nx x Ncycles
     % Construct imperfect obs
     y = apply_obs_bias(yt, obs); % Nx x Ncycles
-    if RUN_TESTS==1; test_apply_obs_bias(y, yt); end
+    if run.unit_tests==1; test_apply_obs_bias(y, yt); end
 end
 
 %% 9) Bias correction parameters and corrections from stats files
@@ -87,25 +86,25 @@ biascor = get_bias_correction_parms();
 biascor.obs_locs_post = obs_locs_post;
 if (biascor.apply_to_model || biascor.apply_to_simobs_only)
     biascor = get_model_bias_corrections(infolder, biascor);
-    if RUN_TESTS==1; test_model_bias_corrections(biascor); end
+    if run.unit_tests==1; test_model_bias_corrections(biascor); end
 end
 if (biascor.apply_to_obs)
     biascor = get_obs_bias_corrections(Nx, infolder, biascor);
-    if RUN_TESTS==1; test_get_obs_bias_corrections(biascor); end
+    if run.unit_tests==1; test_get_obs_bias_corrections(biascor); end
 end
 
 %% 10) Apply smoothers to innovations, increments used for bias correction
 % biascor: AmB, OmB
 if (biascor.apply_to_model || biascor.apply_to_simobs_only)
     biascor = apply_model_smoothers(biascor);
-    if RUN_TESTS==1; test_apply_model_smoothers(biascor); end
+    if run.unit_tests==1; test_apply_model_smoothers(biascor); end
 end
 if (biascor.apply_to_obs)
     biascor = apply_obs_smoothers(biascor);
-    if RUN_TESTS==1; test_apply_obs_smoothers(biascor); end
+    if run.unit_tests==1; test_apply_obs_smoothers(biascor); end
 end
 
-%% Parameters diagnostic print and save
+%% 11) Parameters diagnostic print and save
 if run.verbose==1
     fprintf('Parms values:\n');
     display(run);
@@ -168,6 +167,8 @@ function [infolder, run] = get_run_parms(mainfolder)
     run.verbose = logical(str2double(answer{i}));i=i+1;
     % Plot results during run
     run.progress_plot = logical(str2double(answer{i}));i=i+1;
+    % Graqphical unit tests
+    run.unit_tests = logical(str2double(answer{i}));i=i+1;
     % Use pre-drawn obs from file
     run.use_obs_file = logical(str2double(answer{i}));i=i+1;
     % Save full time history of state vector
@@ -474,8 +475,8 @@ function plot_ensmean_truth(Xt,ensmean,tskip)
     end % for t=2:Ncycles
 end
 
-%% Observe the true state
-function [H, R, Rhat, obs_locs] = get_forward_model(Nx, obs)
+%% Simulate observations from the true state
+function [H, R, Rhat, obs_locs] = get_forward_model(Nx, obs, run)
 % Construct forward operator H, true diagonal obs error covariance R,
 % and assumed obs error covariance Rhat
     oblist = zeros(1,Nx);
@@ -490,6 +491,9 @@ function [H, R, Rhat, obs_locs] = get_forward_model(Nx, obs)
     % H will be Nobs x Nx, R will be Nobs x Nobs, Nobs <= Nx
     [~, H, R, obs_locs] = forward(oblist, rlist_true);
     [~, ~, Rhat] = forward(oblist, rlist_assumed);
+    if run.unit_tests==1
+        test_get_forward_model(Nx,gmask,oblist,anchor_mask,rlist_true)
+    end
 end
 
 %% Observe the true state
@@ -502,7 +506,7 @@ function y0 = observe_truth(Xt, H, R, seed)
     y0 = H * Xt + Rsqrt * randn(Nobs, Ncycles);
 end
 
-%% Observation biases
+%% Apply observation biases
 function y = apply_obs_bias(y0, obs)
    % Multiplicative and additive obs biases
    y = y0.*obs.biasfac + obs.bias;
@@ -624,7 +628,8 @@ function test_model_bias_corrections(biascor)
     ylim(yy);
     [fpath, fname, ~] = fileparts(biascor.fname_AmB);
     title({['A - B from ',fpath], fname},'Interpreter','none');
-    legend('AmB'); figure(h);
+    legend('AmB');
+    figure(h);
     input('Hit Enter key to close figure and continue: ', 's');
     close(h)
 end
@@ -639,7 +644,8 @@ function test_get_obs_bias_corrections(biascor)
     ylim(yy);
     [fpath, fname, ~] = fileparts(biascor.fname_OmHB_prior);
     title({['O - H*B from ',fpath], fname},'Interpreter','none');
-    legend('Prior OmHB',''); figure(h);
+    legend('Prior OmHB','');
+    figure(h);
     input('Hit Enter key to close figure and continue: ', 's');
     close(h)
 end
@@ -656,7 +662,8 @@ function test_apply_model_smoothers(biascor)
     [fpath, fname, ~] = fileparts(biascor.fname_AmB);
     title({['A - B and Smoothed A - B from ',fpath], fname},...
         'Interpreter','none');
-    legend('AmB','Smooth AmB'); figure(h);
+    legend('AmB','Smooth AmB');
+    figure(h);
     input('Hit Enter key to close figure and continue: ', 's');
     close(h)
 end
