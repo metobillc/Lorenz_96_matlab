@@ -339,7 +339,7 @@ function obs = get_obs_parms()
     % Variables skipped (unobserved)
     obs.skip = str2double(answer{i});i=i+1;
     % Fully customized obs locations
-    obs.obs_locs = unique(str2num(answer{i}));i=i+1;
+    obs.standard_locs = unique(str2num(answer{i}));i=i+1;
     % observation error variance
     obs.err_true = str2double(answer{i});i=i+1;
     obs.err_assumed = str2double(answer{i});i=i+1;
@@ -356,6 +356,10 @@ function obs = get_obs_parms()
     obs.anchor_bias = str2double(answer{i});i=i+1;
     % anchor observation multiplicative bias factor
     obs.anchor_biasfac = str2double(answer{i});
+    % Only 1 ob allowed at each gridpoint for now, and
+    obs.all_locs = union(obs.standard_locs, obs.anchor_locs);
+    % Anchor obs take precedence
+    obs.standard_locs = setdiff(obs.all_locs, obs.anchor_locs);
 end
 
 %% Bias correction parameters input
@@ -503,14 +507,15 @@ function [H, R, Rhat, obs_locs] = get_forward_model(Nx, obs, run)
     oblist = zeros(1,Nx);
     rlist_true = oblist;
     rlist_assumed = oblist;
-    % Observed gridpoints
-    if isempty(obs.obs_locs)
-        obs.obs_locs = obs.first:obs.skip:Nx;
+    % Standard obs
+    if isempty(obs.standard_locs)
+        obs.standard_locs = obs.first:obs.skip:Nx;
     end
+    oblist(obs.standard_locs) = 1;
+    rlist_true(obs.standard_locs) = obs.err_true;
+    rlist_assumed(obs.standard_locs) = obs.err_assumed;
     % Extra obs, or obs with different ob error
-    oblist(obs.obs_locs) = 1;
-    rlist_true(obs.obs_locs) = obs.err_true;
-    rlist_assumed(obs.obs_locs) = obs.err_assumed;
+    % These take precedence over standard obs in the same location
     if ~isempty(obs.anchor_locs)
         oblist(obs.anchor_locs) = 1;
         rlist_true(obs.anchor_locs) = obs.anchor_err_true;
@@ -537,8 +542,13 @@ end
 
 %% Apply observation biases
 function y = apply_obs_bias(y0, obs)
+   y = y0;
    % Multiplicative and additive obs biases
-   y = y0.*obs.biasfac + obs.bias;
+   std_obs = find(ismember(obs.all_locs, obs.standard_locs));
+   y(std_obs,:) = y0(std_obs,:)*obs.biasfac + obs.bias;
+   % Anchor obs will usually be unbiased, but may simply have smaller biases
+   anchor_obs = find(ismember(obs.all_locs, obs.anchor_locs));
+   y(anchor_obs,:) = y0(anchor_obs,:)*obs.anchor_biasfac + obs.anchor_bias;
 end
 
 %% Apply smoothers to bias correction mean increments, innovations
@@ -639,7 +649,7 @@ function Xsg = circ_sg_filt(X, order, framelen)
 end
 
 %% Unit tests
-function test_apply_obs_bias(y, yt)
+function test_apply_obs_bias(y, yt, obs)
     h = figure; set(h,'Position',[480,360,600,500]);
     ybar = mean(y,2); ytbar = mean(yt,2);
     locs = 1:size(ytbar);
@@ -720,8 +730,7 @@ end
 
 function test_get_forward_model(obs,rlist_true)
     h = figure; set(h,'Position',[200 200 1200 400]);
-    stdlocs = setdiff(obs.obs_locs, obs.anchor_locs);
-    plot(stdlocs, obs.err_true, 'bx'); hold on; grid on
+    plot(obs.standard_locs, obs.err_true, 'bx'); hold on; grid on
     if ~isempty(obs.anchor_locs)
         plot(obs.anchor_locs, obs.anchor_err_true, 'rd',...
             'MarkerFaceColor','red');
