@@ -326,10 +326,11 @@ function obs = get_obs_parms()
     opts='on';
     prompt={'Seed','First var observed','Grid skip','Custom obs_loc string',...
             'True Ob error','Assumed Ob error','Ob bias','Ob bias factor',...
-            'Anchor obs_loc string', 'Anchor Ob error', 'Anchor Assumed Ob error'};
+            'Anchor obs_loc string', 'Anchor Ob error', 'Anchor Assumed Ob error',...
+            'Anchor ob bias','Anchor ob bias factor'};
     default={'4249687','1','4','[100:4:400 300 600:8:960 960]'...
              '1.0','1.0','0.3','1.0',...
-             '[100:8:400 400 600:8:960 960]','0.10','0.10'};
+             '[100:8:400 400 600:8:960 960]','0.10','0.10','0.0','1.0'};
     answer=inputdlg(prompt,name,numlines,default,opts);i=1;
     % Seed for rng to draw obs
     obs.seed = str2double(answer{i});i=i+1;
@@ -350,7 +351,11 @@ function obs = get_obs_parms()
     obs.anchor_locs = unique(str2num(answer{i}));i=i+1;
     % observation error variance
     obs.anchor_err_true = str2double(answer{i});i=i+1;
-    obs.anchor_err_assumed = str2double(answer{i});
+    obs.anchor_err_assumed = str2double(answer{i});i=i+1;
+    % anchor observation additive bias
+    obs.anchor_bias = str2double(answer{i});i=i+1;
+    % anchor observation multiplicative bias factor
+    obs.anchor_biasfac = str2double(answer{i});
 end
 
 %% Bias correction parameters input
