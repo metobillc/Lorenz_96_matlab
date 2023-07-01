@@ -187,9 +187,10 @@ end
 function outfolder = create_outfolder(infolder, run)
     outfolder = fullfile(infolder,'Experiments',run.expname);
     if exist(outfolder, 'dir')
-        reply = input(sprintf('Directory %s exists, OK to overwrite? Y/N: ',...
-            strrep(outfolder,'\','\\')),'s');
-        if lower(reply(1:1)) ~= 'y'
+        question = sprintf('Directory %s exists, OK to overwrite?',...
+            outfolder);
+        overwrite = questdlg(question, 'Experiment Exists');
+        if strcmp(overwrite, 'Yes') ~= true
             error('Aborting run to avoid potential overwrite of prior experiment %s in %s',...
                   run.expname,outfolder);
         end
