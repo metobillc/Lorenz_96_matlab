@@ -338,7 +338,7 @@ function obs = get_obs_parms()
     % Variables skipped (unobserved)
     obs.skip = str2double(answer{i});i=i+1;
     % Fully customized obs locations
-    obs.custom_locs = unique(str2num(answer{i}));i=i+1;
+    obs.obs_locs = unique(str2num(answer{i}));i=i+1;
     % observation error variance
     obs.err_true = str2double(answer{i});i=i+1;
     obs.err_assumed = str2double(answer{i});i=i+1;
@@ -499,29 +499,24 @@ function [H, R, Rhat, obs_locs] = get_forward_model(Nx, obs, run)
     rlist_true = oblist;
     rlist_assumed = oblist;
     % Observed gridpoints
-    first = obs.first;
-    skip = obs.skip;
-    gmask = first:skip:Nx;
-    % User-specified obs locations
-    if ~isempty(obs.custom_locs)
-        gmask = obs.custom_locs;
+    if isempty(obs.obs_locs)
+        obs.obs_locs = obs.first:obs.skip:Nx;
     end
     % Extra obs, or obs with different ob error
-    anchor_mask = obs.anchor_locs;
-    oblist(gmask) = 1;
-    rlist_true(gmask) = obs.err_true;
-    rlist_assumed(gmask) = obs.err_assumed;
-    if ~isempty(anchor_mask)
-        oblist(anchor_mask) = 1;
-        rlist_true(anchor_mask) = obs.anchor_err_true;
-        rlist_assumed(anchor_mask) = obs.anchor_err_assumed;
+    oblist(obs.obs_locs) = 1;
+    rlist_true(obs.obs_locs) = obs.err_true;
+    rlist_assumed(obs.obs_locs) = obs.err_assumed;
+    if ~isempty(obs.anchor_locs)
+        oblist(obs.anchor_locs) = 1;
+        rlist_true(obs.anchor_locs) = obs.anchor_err_true;
+        rlist_assumed(obs.anchor_locs) = obs.anchor_err_assumed;
     end
     % Set up observation operator and ob error covariance matrix
     % H will be Nobs x Nx, R will be Nobs x Nobs, Nobs <= Nx
     [~, H, R, obs_locs] = forward(oblist, rlist_true);
     [~, ~, Rhat] = forward(oblist, rlist_assumed);
     if run.unit_tests==1
-        test_get_forward_model(Nx,gmask,oblist,anchor_mask,rlist_true)
+        test_get_forward_model(obs,rlist_true)
     end
 end
 
@@ -718,19 +713,22 @@ function test_apply_obs_smoothers(biascor)
     close(h)
 end
 
-function test_get_forward_model(Nx,gmask,oblist,anchor_mask,rlist_true)
+function test_get_forward_model(obs,rlist_true)
     h = figure; set(h,'Position',[200 200 1200 400]);
-    plot(gmask,rlist_true(gmask),'bx'); hold on; grid on
-    if ~isempty(anchor_mask)
-        plot(anchor_mask,rlist_true(anchor_mask),'rd','MarkerFaceColor','red');
+    stdlocs = setdiff(obs.obs_locs, obs.anchor_locs);
+    plot(stdlocs, obs.err_true, 'bx'); hold on; grid on
+    if ~isempty(obs.anchor_locs)
+        plot(obs.anchor_locs, obs.anchor_err_true, 'rd',...
+            'MarkerFaceColor','red');
     end
-    plot(1:Nx,oblist.*rlist_true,'b:'); hold on;
+    Nx = length(rlist_true);
+    plot(1:Nx,rlist_true,'b:'); hold on;
     xlim([1 Nx]);
     set(gca,'xtick',[1 get(gca,'xtick') Nx]);
-    ylim([0 1.05*max(rlist_true)]);
+    ylim([0 1.05*max(obs.err_true)]);
     xlabel('Obs locations');
     ylabel('Ob error variance');
-    if isempty(anchor_mask)
+    if isempty(obs.anchor_locs)
         title('Standard Obs Locations and Error Variance');
         legend('Standard','Location','Best');
     else
