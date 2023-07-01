@@ -73,10 +73,10 @@ if run.use_obs_file
         y = y(:,1:run.Ncycles);  % Nobs x Ncycles
     end
 else
-    yt = observe_truth(Xt, H, R, obs.seed); % Nx x Ncycles
+    yt = observe_truth(Xt, H, R, obs.seed); % Nobs x Ncycles
     % Construct imperfect obs
-    y = apply_obs_bias(yt, obs); % Nx x Ncycles
-    if run.unit_tests==1; test_apply_obs_bias(y, yt); end
+    y = apply_obs_bias(yt, obs); % Nobs x Ncycles
+    if run.unit_tests==1; test_apply_obs_bias(y, yt, obs); end
 end
 
 %% 9) Bias correction parameters and corrections from stats files
@@ -246,7 +246,7 @@ function model = get_model_parms(nature)
     % Allow experiments with parameters that differ from
     % the nature run parameters
     name='Model Parameters (default to Nature Run)';
-    numlines=[1 80];
+    numlines=1;
     opts='on';
     prompt={'K(parm)','I(parm)',...
             'F(orcing)','b (damping)',...
@@ -271,7 +271,7 @@ end
 %% DA parameters input
 function da = get_da_parms()
     name='DA Parameters';
-    numlines=[1 80];
+    numlines=1;
     opts='on';
     prompt={'Cycle skip','Ensemble size','Confidence level','Spinup',...
             'Prior inflation','Localization type','Localization radius',...
@@ -322,7 +322,7 @@ end
 %% Observation parameters input
 function obs = get_obs_parms()
     name='Obs Parameters';
-    numlines=[1 80];
+    numlines=1;
     opts='on';
     prompt={'Seed','First var observed','Grid skip','Custom obs_loc string',...
             'True Ob error','Assumed Ob error','Ob bias','Ob bias factor',...
@@ -361,7 +361,7 @@ end
 %% Bias correction parameters input
 function biascor = get_bias_correction_parms()
     name='Bias Correction Input';
-    numlines=[1 80];
+    numlines=1;
     opts='on';
     prompt={'Apply BC to obs','Apply BC to model AND simobs',...
             'Apply BC ONLY to simobs'};
@@ -545,7 +545,7 @@ end
 function biascor = apply_model_smoothers(biascor)
     % Apply smoother to increments
     name='Increment Smoother';
-    numlines=[1 80];
+    numlines=1;
     opts='on';
     prompt={'Smoother type','Smoother parmlist',};
     default={'Savitzky-Golay','[9, 21]'};
@@ -569,7 +569,7 @@ function biascor = apply_obs_smoothers(biascor)
 % Needs a rewrite following biascor_test
     % Apply smoother to innovationss
     name='Innnovation Smoother';
-    numlines=[1 80];
+    numlines=1;
     opts='on';
     prompt={'Smoother type','Smoother parmlist',};
     default={'Savitzky-Golay','[9, 21]'};
@@ -647,8 +647,8 @@ function test_apply_obs_bias(y, yt)
     title('True and Biased Observations')
     legend('True obs', 'Biased obs');
     figure(h);
-    input('Hit Enter key to close figure and continue: ', 's');
-    close(h);
+    closefig = questdlg('Close figure and continue?', 'Unit Test');
+    if strcmp(closefig,'Yes')==true; close(h); else keyboard; end
 end
 
 function test_model_bias_corrections(biascor)
@@ -661,8 +661,8 @@ function test_model_bias_corrections(biascor)
     title({['A - B from ',fpath], fname},'Interpreter','none');
     legend('AmB');
     figure(h);
-    input('Hit Enter key to close figure and continue: ', 's');
-    close(h)
+    closefig = questdlg('Close figure and continue?', 'Unit Test');
+    if strcmp(closefig,'Yes')==true; close(h); else keyboard; end
 end
 
 function test_get_obs_bias_corrections(biascor)
@@ -677,8 +677,8 @@ function test_get_obs_bias_corrections(biascor)
     title({['O - H*B from ',fpath], fname},'Interpreter','none');
     legend('Prior OmHB','');
     figure(h);
-    input('Hit Enter key to close figure and continue: ', 's');
-    close(h)
+    closefig = questdlg('Close figure and continue?', 'Unit Test');
+    if strcmp(closefig,'Yes')==true; close(h); else keyboard; end
 end
 
 function test_apply_model_smoothers(biascor)
@@ -695,8 +695,8 @@ function test_apply_model_smoothers(biascor)
         'Interpreter','none');
     legend('AmB','Smooth AmB');
     figure(h);
-    input('Hit Enter key to close figure and continue: ', 's');
-    close(h)
+    closefig = questdlg('Close figure and continue?', 'Unit Test');
+    if strcmp(closefig,'Yes')==true; close(h); else keyboard; end
 end
 
 function test_apply_obs_smoothers(biascor)
@@ -714,8 +714,8 @@ function test_apply_obs_smoothers(biascor)
     title({['Smoothed O - H*B, prior and post from ',fpath], fname},'Interpreter','none');
     legend('Smooth Prior OmHB','','Smooth Post OmHB','');
     figure(h);
-    input('Hit Enter key to close figure and continue: ', 's');
-    close(h)
+    closefig = questdlg('Close figure and continue?', 'Unit Test');
+    if strcmp(closefig,'Yes')==true; close(h); else keyboard; end
 end
 
 function test_get_forward_model(obs,rlist_true)
@@ -741,6 +741,6 @@ function test_get_forward_model(obs,rlist_true)
         legend('Standard','Anchor','Location','Best');
     end
     figure(h);
-    input('Hit Enter key to close figure and continue: ', 's');
-    close(h)
+    closefig = questdlg('Close figure and continue?', 'Unit Test');
+    if strcmp(closefig,'Yes')==true; close(h); else keyboard; end
 end
