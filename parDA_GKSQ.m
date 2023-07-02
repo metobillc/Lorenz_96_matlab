@@ -1,7 +1,7 @@
 function [ensmean,post_stmse,post_stvarmse,varargout] =...
     parDA_GKSQ(XIC,Xt,y,outfolder,H,Rhat,biascor,da,model,nature,run,obs)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Bill Campbell Last Modified 7/1/2023
+% Bill Campbell Last Modified 7/2/2023
 % Global-solve Kalman Square Root filter
 % Added covariance localization
 % Added ensemble variance for comparison with squared error
@@ -18,7 +18,7 @@ options=odeset('RelTol', model.reltol, 'AbsTol', model.abstol);
 Nt = 3;
 tsteps = linspace(0, model.timestep, Nt);
 [Nx,Ncycles]=size(Xt);
-if run.verbose==1
+if run.verbose >= 1
     fprintf('Cycle = 1 of %d: da.K=%d,model.timestep=%4.2f,da.alpha=%5.3f,seed=%d\n',...
         Ncycles,da.K,model.timestep,da.alpha,nature.seed);
 end
@@ -42,19 +42,19 @@ errKSQ = scoreKSQ;
 tstart=tic;
 first = true;
 % Knisely
-filter = da.filter_small;
-if filter==true
+filter_small = da.filter_small;
+if filter_small
     ZZ_small = zeros(Nx,da.K);
 end
 loranon = @(t, x) circ_lorenz2005(t, x, model);
 for ncycle = 1:Ncycles-1
     % add small scale back to posterier before forecast  % Knisely
-    if filter==true
+    if filter_small
         XX = XX + ZZ_small;
     end
     %%%%%%%%% Global Kalman Square Root
     %%%%%%%% build ensemble members
-    if run.parallel==1
+    if run.parallel
         parfor kk = 1:da.K
             % integrate the equations with one of the available integrators, in this
             % case the Runga-Kutta 4,5 method (good for simple, non-stiff systems).
@@ -63,7 +63,7 @@ for ncycle = 1:Ncycles-1
             ZZ(:, kk) = M(end, :).'; % forecast (background) ensemble member, which is input as the prior to the DA routine
 
             % we filter out small scale from prior before DA, then add it back to posterior afterwards   % Knisely
-            if filter==true
+            if filter_small
                 [ZZ(:, kk),ZZ_small(:, kk)] = filter_small_scales(ZZ(:, kk), model);
             end
         end
@@ -76,7 +76,7 @@ for ncycle = 1:Ncycles-1
             ZZ(:, kk) = M(end, :).'; % forecast (background) ensemble member, which is input as the prior to the DA routine
 
             % we filter out small scale from prior before DA, then add it back to posterier afterwards   % Knisely
-            if filter==true
+            if filter_small
                 [ZZ(:, kk),ZZ_small(:, kk)] = filter_small_scales(ZZ(:, kk), model);
             end
         end
@@ -96,7 +96,7 @@ for ncycle = 1:Ncycles-1
     XKSQ(:, :, ncycle+1) = XX; % posterior
 
     % Diagnostic output
-    if run.verbose==1 && (~mod(ncycle,run.printcycle) || ncycle==Ncycles-1)
+    if run.verbose >= 1 && (~mod(ncycle,run.printcycle) || ncycle==Ncycles-1)
         % Compute mean value so far
         % Will want to add calculations for ensvar also?
         [time_avg,time_stdev] =...
@@ -119,7 +119,7 @@ for ncycle = 1:Ncycles-1
             ncycle,Ncycles,da.K,model.timestep,da.alpha,nature.seed,telapsed);
         display_results('GKSQ',time_avg.',time_vavg.');
         % First fix plot_results, then add ensvar
-        if run.progress_plot==1
+        if run.progress_plot
             plot_results(first,ncycle,prior_space_mse_norm,...
                 prior_space_varse_norm,post_space_mse_norm,...
                 post_space_varse_norm,Ncycles,run.printcycle,da.ci,da.K);
@@ -178,7 +178,7 @@ if ~run.use_obs_file
     save(obsfile,'y');
 end
 % Optional save full prior, posterior
-if (run.save_state)    % Create filenames, and open files
+if run.save_state    % Create filenames, and open files
     fprintf('Saving prior and posterior full states (includes spinup)...\n');
     prior = strrep(generic,'generic','prior');
     save(prior,'ZKSQ','-v7.3');
@@ -227,7 +227,7 @@ end
 % the model state (Z) defined by Model III of Lorenz 2005
 function [X,Y] = filter_small_scales(Z, model)
 	% Check model type
-	if model.type~=3
+	if model.type ~= 3
 	    error('Filter_small_scales should only be called on Model 3, this run is Model %d\n',model.type)
 	end
 	% Initialize variables and compute parameters
