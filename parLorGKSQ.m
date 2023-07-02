@@ -3,7 +3,7 @@
 % Using Lorenz 96 Model I, II or III
 % Global Kalman Square Root filter
 % Bill Campbell
-% Last modified 6/26/2023
+% Last modified 7/1/2023
 
 start = datestr(clock);
 fprintf('Started: %s\n',start);
@@ -121,7 +121,13 @@ save(parmfile,'run','nature','model','da','obs','biascor');
 
 %% Cycling DA run
 % Execute up to Ncycles-1 DA cycles
-parallelize(run.reserve);
+parallel = ver('parallel');
+if isempty(parallel)
+    run.parallel = 0;
+end
+if run.parallel==1
+    parallelize(run.reserve);
+end
 tic;
 [ensmean,post_stmse,post_stvarmse,bmse_pct,bvar_pct] = ...
     parDA_GKSQ(XIC,Xt,y,outfolder,H,Rhat,biascor,da,model,nature,run);
@@ -153,11 +159,13 @@ function [infolder, run] = get_run_parms(mainfolder)
     prompt={'Experiment Name','Cycles (4/dy)','Cycles per print',...
             'Verbose','Progress plot','Unit tests',...
             'Use obs file','Save state',...
-            'Ring movie','Frame rate (4=1/dy)','Reserved procs'};
+            'Ring movie','Frame rate (4=1/dy)',...
+            'Use parallel toolbox','Reserved procs'};
     default={'mytest','500','25',...
              '1','1','1',...
              '0','0',...
-             '1','12','4'};
+             '1','12',...
+             '1','4'};
     answer=inputdlg(prompt,name,numlines,default,opts);i=1;
     % Unique experiment name
     run.expname = answer{i};i=i+1;
@@ -179,6 +187,8 @@ function [infolder, run] = get_run_parms(mainfolder)
     run.ring_movie = logical(str2double(answer{i}));i=i+1;
     % Ring movie frame rate
     run.ring_movie_frame_rate = str2double(answer{i});i=i+1;
+    % Use parallel toolbox if available
+    run.parallel = logical(str2double(answer{i}));i=i+1;
     % Processors to reserve for non-Matlab use
     run.reserve = str2double(answer{i});
 end

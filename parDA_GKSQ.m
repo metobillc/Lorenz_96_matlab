@@ -1,7 +1,7 @@
 function [ensmean,post_stmse,post_stvarmse,varargout] =...
     parDA_GKSQ(XIC,Xt,y,outfolder,H,Rhat,biascor,da,model,nature,run)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Bill Campbell Last Modified 9/21/2022
+% Bill Campbell Last Modified 7/1/2023
 % Global-solve Kalman Square Root filter
 % Added covariance localization
 % Added ensemble variance for comparison with squared error
@@ -17,8 +17,11 @@ options=odeset('RelTol', model.reltol, 'AbsTol', model.abstol);
 % explicit time dependence
 Nt = 3;
 tsteps = linspace(0, model.timestep, Nt);
-
 [Nx,Ncycles]=size(Xt);
+if run.verbose==1
+    fprintf('Cycle = 1 of %d: da.K=%d,model.timestep=%4.2f,da.alpha=%5.3f,seed=%d\n',...
+        Ncycles,da.K,model.timestep,da.alpha,nature.seed);
+end
 
 % Define covariance localization matrix CL
 periodic = true;
@@ -35,37 +38,47 @@ XKSQ(:,:,1) = XX;
 scoreKSQ = zeros(Nx*2,Ncycles);
 ensvarKSQ = scoreKSQ;
 errKSQ = scoreKSQ;
-% Knisely
-if da.filter_small==true
-    ZZ_small = zeros(Nx,da.K);
-end
 
-if run.verbose==1
-    fprintf('Cycle = 1 of %d: da.K=%d,model.timestep=%4.2f,da.alpha=%5.3f,seed=%d\n',...
-        Ncycles,da.K,model.timestep,da.alpha,nature.seed);
-end
 tstart=tic;
 first = true;
+% Knisely
+filter = da.filter_small;
+if filter==true
+    ZZ_small = zeros(Nx,da.K);
+end
 loranon = @(t, x) circ_lorenz2005(t, x, model);
 for ncycle = 1:Ncycles-1
-
     % add small scale back to posterier before forecast  % Knisely
-    if da.filter_small==true
+    if filter==true
         XX = XX + ZZ_small;
     end
-
     %%%%%%%%% Global Kalman Square Root
     %%%%%%%% build ensemble members
-    parfor kk = 1:da.K
-        % integrate the equations with one of the available integrators, in this
-        % case the Runga-Kutta 4,5 method (good for simple, non-stiff systems).
-        M0 = XX(:, kk); % posterior ensemble member from previous time step
-        [~,M] = ode45(loranon, tsteps, M0, options);
-        ZZ(:, kk) = M(end, :).'; % forecast (background) ensemble member, which is input as the prior to the DA routine
+    if run.parallel==1
+        parfor kk = 1:da.K
+            % integrate the equations with one of the available integrators, in this
+            % case the Runga-Kutta 4,5 method (good for simple, non-stiff systems).
+            M0 = XX(:, kk); % posterior ensemble member from previous time step
+            [~,M] = ode45(loranon, tsteps, M0, options);
+            ZZ(:, kk) = M(end, :).'; % forecast (background) ensemble member, which is input as the prior to the DA routine
 
-        % we filter out small scale from prior before DA, then add it back to posterier afterwards   % Knisely
-        if da.filter_small==true
-            [ZZ(:, kk),ZZ_small(:, kk)] = filter_small_scales(ZZ(:, kk), model);
+            % we filter out small scale from prior before DA, then add it back to posterior afterwards   % Knisely
+            if filter==true
+                [ZZ(:, kk),ZZ_small(:, kk)] = filter_small_scales(ZZ(:, kk), model);
+            end
+        end
+    else
+        for kk = 1:da.K
+            % integrate the equations with one of the available integrators, in this
+            % case the Runga-Kutta 4,5 method (good for simple, non-stiff systems).
+            M0 = XX(:, kk); % posterior ensemble member from previous time step
+            [~,M] = ode45(loranon, tsteps, M0, options);
+            ZZ(:, kk) = M(end, :).'; % forecast (background) ensemble member, which is input as the prior to the DA routine
+
+            % we filter out small scale from prior before DA, then add it back to posterier afterwards   % Knisely
+            if filter==true
+                [ZZ(:, kk),ZZ_small(:, kk)] = filter_small_scales(ZZ(:, kk), model);
+            end
         end
     end
     ZKSQ(:, :, ncycle+1) = ZZ; % forecast (background) ensemble, which is input as the prior to the DA routine
