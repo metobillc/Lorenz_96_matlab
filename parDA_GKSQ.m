@@ -64,8 +64,8 @@ for ncycle = 1:Ncycles-1
         ZZ(:, kk) = M(end, :).'; % forecast (background) ensemble member, which is input as the prior to the DA routine
 
         % we filter out small scale from prior before DA, then add it back to posterier afterwards   % Knisely
-        if small_filter==true
-            [ZZ(:, kk),ZZ_small(:, kk)] = filter_small_scale(ZZ(:, kk), da.Ismooth);
+        if da.filter_small==true
+            [ZZ(:, kk),ZZ_small(:, kk)] = filter_small_scales(ZZ(:, kk), model);
         end
     end
     ZKSQ(:, :, ncycle+1) = ZZ; % forecast (background) ensemble, which is input as the prior to the DA routine
@@ -210,28 +210,56 @@ function display_results(tstr,aerr,varargin)
     end
 end
 
-% This function separates the large (x) and small (y) scales from
-% the model state (z) defined by Model III of Lorenz 2005
-function [x,y] = filter_small_scale(z,I)
-  I     = round(abs(I));
+% This function separates the large (X) and small (Y) scales from
+% the model state (Z) defined by Model III of Lorenz 2005
+function [X,Y] = filter_small_scales(Z, model)
+	% Check model type
+	if model.type~=3
+	    error('Filter_small_scales should only be called on Model 3, this run is Model %d\n',model.type)
+	end
+	% Initialize variables and compute parameters
+	% K even vs. odd
+	even=(mod(model.K,2)==0);
+	% Model III: Compute the large scales of Z, and store them in X
+	% Lorenz 2005, eq. 13a
+	Nz = length(Z);
+	X = zeros(Nz,1);
+	I = model.I;
+	alpha = (3*I^2 + 3)/(2*I^3 + 4*I);
+	beta  = (2*I^2 + 1)/(I^4 + 2*I^2);
+	for j = -I:I
+	    fac = (alpha - beta*abs(j)) / (1.0 + even*(abs(j)==I));
+	    X = X + fac * circshift(Z,-j);
+	end
+	% Subtract X from Z to get the small scales of Z, stored in Y
+	% Lorenz 2005, eq. 13b
+	Y = Z - X;
+end
+
+% Poterjoy original
+% Code does not handle Kparm odd correctly, hardcoded assuming Kparm even
+% Inelegant solution to periodic BCs
+% I should not be independent of model.I (calling routine issue)
+% Presumes we are using model III, should explicitly check
+function [x,y] = poterjoy_filter_small_scale(z,I)
+
   % Parameters
   Nx    = length(z(:,1));
-  if I > floor(Nx/2)
-      error('Maximum Ismooth must be less than half of the domain size')
-  end
   alpha = (3*I^2 + 3)/(2*I^3 + 4*I);
   beta  = (2*I^2 + 1)/(I^4 + 2*I^2);
+  I     = round(I);
 
   % Partition z into x and y
-  z0 = [z; z; z];
-  i = (-(I-1):I-10).';  % 2*(I-1) x 1
-  x = zeros(1,Nx);  % 1
+  z0 = [z;z;z];
+  i = [-(I-1):I-1]';
+
   for m = 1:Nx
     n = Nx + m;
     x(m) = sum( (alpha - beta.*abs(i)).* z0(n+i) ) + ...
                 (alpha - beta.*abs(-I)).* z0(n-I)/2  + ...
                 (alpha - beta.*abs(I)).* z0(n+I)/2;
   end
-  x = x.';
+  x = x';
   y = z - x;
+
 end
