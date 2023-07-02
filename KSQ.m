@@ -4,15 +4,21 @@ function [Xa,score,ensvar,varargout] = KSQ(Zfull,alpha,K,H,R,y,Xt,varargin)
 % Return prior and posterior error variances along with squared errors
 % Model and obs bias correction by Bill Campbell 6/26/2023
 
-if (nargin > 7)
+if nargin > 7
     CL = varargin{1};
 end
-if (nargin > 8)
+if nargin > 8
     biascor = varargin{2};
 else
-    biascor.apply_to_obs = false;
+    biascor.apply_to_standard_obs = false;
     biascor.apply_to_simobs_only = false;
     biascor.apply_to_model = false;
+end
+if nargin > 9
+    obs = varargin{3};
+    std_idx = obs.standard_idx;
+else
+    std_idx = 1:size(y, 1); % y is Nobs x Ncycles
 end
 
 %% Model bias correction
@@ -32,8 +38,9 @@ else
     yb_bar = H * xb_bar; % Nobs x 1
 end
 % Apply obs bias correction directly to obs
-if biascor.apply_to_obs  % Subtract mean of O - H*B from another run
-    y = y - biascor.OmHB_smooth_post;
+if biascor.apply_to_standard_obs  % Subtract mean of O - H*B from another run
+    % Multiplicative and additive obs biases
+    y(std_idx,:) = y(std_idx,:) - biascor.OmHB_smooth_post(std_idx);
 end
 
 %% Create and update ensemble
