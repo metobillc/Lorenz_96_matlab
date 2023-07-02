@@ -1,5 +1,5 @@
 function [ensmean,post_stmse,post_stvarmse,varargout] =...
-    parDA_GKSQ(XIC,Xt,y,outfolder,H,Rhat,biascor,da,model,nature,run)
+    parDA_GKSQ(XIC,Xt,y,outfolder,H,Rhat,biascor,da,model,nature,run,obs)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Bill Campbell Last Modified 7/1/2023
 % Global-solve Kalman Square Root filter
@@ -89,7 +89,7 @@ for ncycle = 1:Ncycles-1
             ensvarKSQ(1:2*Nx,ncycle+1),...
             errKSQ(1:2*Nx,ncycle+1)] = ...
             KSQ(ZZ,da.alpha,da.K,H,Rhat,y(:,ncycle+1),Xt(:,ncycle+1),...
-                CL,biascor);
+                CL,biascor,obs);
     else
         XX = ZZ; % No DA, set posterior equal to prior
     end
