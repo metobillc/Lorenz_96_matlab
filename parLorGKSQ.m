@@ -360,6 +360,9 @@ function obs = get_obs_parms()
     obs.all_locs = union(obs.standard_locs, obs.anchor_locs);
     % Anchor obs take precedence
     obs.standard_locs = setdiff(obs.all_locs, obs.anchor_locs);
+    % Store indices of standard and anchor obs
+    obs.standard_idx = find(ismember(obs.all_locs, obs.standard_locs));
+    obs.anchor_idx = find(ismember(obs.all_locs, obs.anchor_locs));
 end
 
 %% Bias correction parameters input
@@ -544,11 +547,11 @@ end
 function y = apply_obs_bias(y0, obs)
    y = y0;
    % Multiplicative and additive obs biases
-   std_obs = find(ismember(obs.all_locs, obs.standard_locs));
-   y(std_obs,:) = y0(std_obs,:)*obs.biasfac + obs.bias;
+   std_idx = obs.standard_idx;
+   y(std_idx,:) = y0(std_idx,:)*obs.biasfac + obs.bias;
    % Anchor obs will usually be unbiased, but may simply have smaller biases
-   anchor_obs = find(ismember(obs.all_locs, obs.anchor_locs));
-   y(anchor_obs,:) = y0(anchor_obs,:)*obs.anchor_biasfac + obs.anchor_bias;
+   anchor_idx = obs.anchor_idx;
+   y(anchor_idx,:) = y0(anchor_idx,:)*obs.anchor_biasfac + obs.anchor_bias;
 end
 
 %% Apply smoothers to bias correction mean increments, innovations
@@ -653,12 +656,15 @@ function test_apply_obs_bias(y, yt, obs)
     h = figure; set(h,'Position',[480,360,600,500]);
     ybar = mean(y,2); ytbar = mean(yt,2);
     locs = 1:size(ytbar);
-    plot(locs, ytbar, 'k-', locs, ybar, 'r--'); grid on
-    title('True and Biased Observations')
-    legend('True obs', 'Biased obs');
-    figure(h);
-    closefig = questdlg('Close figure and continue?', 'Unit Test');
-    if strcmp(closefig,'Yes')==true; close(h); else keyboard; end
+    plot(locs, ytbar, 'k-', locs, ybar, 'r--'); grid on; hold on
+    plot(obs.standard_idx, ybar(obs.standard_idx),'b*');
+    plot(obs.anchor_idx, ybar(obs.anchor_idx),'rd');
+    xlim('tight');
+    xlabel('Obs Index');
+    ylabel('Time Mean Obs Value')
+    title('Time Mean of True and Biased Observations')
+    legend('True obs', 'Biased obs', 'Standard','Anchor');
+    h = close_fig(h); if h ~= 0; figure(h); keyboard; end
 end
 
 function test_model_bias_corrections(biascor)
