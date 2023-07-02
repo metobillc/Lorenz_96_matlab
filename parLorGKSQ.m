@@ -676,9 +676,7 @@ function test_model_bias_corrections(biascor)
     [fpath, fname, ~] = fileparts(biascor.fname_AmB);
     title({['A - B from ',fpath], fname},'Interpreter','none');
     legend('AmB');
-    figure(h);
-    closefig = questdlg('Close figure and continue?', 'Unit Test');
-    if strcmp(closefig,'Yes')==true; close(h); else keyboard; end
+    h = close_fig(h); if h ~= 0; figure(h); keyboard; end
 end
 
 function test_get_obs_bias_corrections(biascor)
@@ -692,9 +690,7 @@ function test_get_obs_bias_corrections(biascor)
     [fpath, fname, ~] = fileparts(biascor.fname_OmHB_prior);
     title({['O - H*B from ',fpath], fname},'Interpreter','none');
     legend('Prior OmHB','');
-    figure(h);
-    closefig = questdlg('Close figure and continue?', 'Unit Test');
-    if strcmp(closefig,'Yes')==true; close(h); else keyboard; end
+    h = close_fig(h); if h ~= 0; figure(h); keyboard; end
 end
 
 function test_apply_model_smoothers(biascor)
@@ -710,9 +706,7 @@ function test_apply_model_smoothers(biascor)
     title({['A - B and Smoothed A - B from ',fpath], fname},...
         'Interpreter','none');
     legend('AmB','Smooth AmB');
-    figure(h);
-    closefig = questdlg('Close figure and continue?', 'Unit Test');
-    if strcmp(closefig,'Yes')==true; close(h); else keyboard; end
+    h = close_fig(h); if h ~= 0; figure(h); keyboard; end
 end
 
 function test_apply_obs_smoothers(biascor)
@@ -729,33 +723,42 @@ function test_apply_obs_smoothers(biascor)
     [fpath, fname, ~] = fileparts(biascor.fname_OmHB_prior);
     title({['Smoothed O - H*B, prior and post from ',fpath], fname},'Interpreter','none');
     legend('Smooth Prior OmHB','','Smooth Post OmHB','');
-    figure(h);
-    closefig = questdlg('Close figure and continue?', 'Unit Test');
-    if strcmp(closefig,'Yes')==true; close(h); else keyboard; end
+    h = close_fig(h); if h ~= 0; figure(h); keyboard; end
 end
 
 function test_get_forward_model(obs,rlist_true)
     h = figure; set(h,'Position',[200 200 1200 400]);
-    plot(obs.standard_locs, obs.err_true, 'bx'); hold on; grid on
+    Nx = length(rlist_true);
+    plot(1:Nx, rlist_true, 'b:');
+    hold on; grid on
     if ~isempty(obs.anchor_locs)
         plot(obs.anchor_locs, obs.anchor_err_true, 'rd',...
             'MarkerFaceColor','red');
     end
-    Nx = length(rlist_true);
-    plot(1:Nx,rlist_true,'b:'); hold on;
+    plot(obs.standard_locs, obs.err_true, 'bx');
     xlim([1 Nx]);
     set(gca,'xtick',[1 get(gca,'xtick') Nx]);
     ylim([0 1.05*max(obs.err_true)]);
     xlabel('Obs locations');
     ylabel('Ob error variance');
-    if isempty(obs.anchor_locs)
+    if isempty(obs.anchor_idx)
         title('Standard Obs Locations and Error Variance');
         legend('Standard','Location','Best');
     else
         title('Standard and Anchor Obs Locations and Error Variance');
         legend('Standard','Anchor','Location','Best');
     end
-    figure(h);
-    closefig = questdlg('Close figure and continue?', 'Unit Test');
-    if strcmp(closefig,'Yes')==true; close(h); else keyboard; end
+    h = close_fig(h); if h ~= 0; figure(h); keyboard; end
+end
+
+% Helper function for unit test figures
+function h = close_fig(h)
+    options.Resize='on'; options.WindowStyle='normal';
+    closefig = inputdlg({'Close figure and continue?'}, 'Unit Test', ...
+        1, {'Yes'} ,options);
+    % Cancel returns an empty cell array, so treat that as a No
+    if ~isempty(closefig) && strcmp(closefig{1},'Yes')==true
+        close(h)
+        h = 0;
+    end
 end
