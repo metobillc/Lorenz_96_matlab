@@ -48,7 +48,7 @@ XIC = Xt(:,ics(2:end)); % Nx x K
 % Now can discard unneeded cycles
 Xt = Xt(:,1:run.Ncycles);  % Nx x Ncycles
 
-%% 6)  Observation parameters
+%% 6) Observation parameters
 % obs: seed,first,skip,err_true,err_assumed,bias,biasfac
 obs = get_obs_parms();
 if run.use_obs_file
@@ -148,7 +148,7 @@ function [infolder, run] = get_run_parms(mainfolder)
     infolder = uigetdir(mainfolder,...
         'Choose output folder with Experiments subfolder:');
     name='Run Input';
-    numlines=[1 120];
+    numlines=[1 60];
     opts='on';
     prompt={'Experiment Name','Cycles (4/dy)','Cycles per print',...
             'Verbose','Progress plot','Unit tests',...
@@ -246,7 +246,7 @@ function model = get_model_parms(nature)
     % Allow experiments with parameters that differ from
     % the nature run parameters
     name='Model Parameters (default to Nature Run)';
-    numlines=1;
+    numlines=[1 60];
     opts='on';
     prompt={'K(parm)','I(parm)',...
             'F(orcing)','b (damping)',...
@@ -271,7 +271,7 @@ end
 %% DA parameters input
 function da = get_da_parms()
     name='DA Parameters';
-    numlines=1;
+    numlines=[1 60];
     opts='on';
     prompt={'Cycle skip','Ensemble size','Confidence level','Spinup',...
             'Prior inflation','Localization type','Localization radius',...
@@ -322,7 +322,7 @@ end
 %% Observation parameters input
 function obs = get_obs_parms()
     name='Obs Parameters';
-    numlines=1;
+    numlines=[1 60];
     opts='on';
     prompt={'Seed','First var observed','Grid skip','Custom obs_loc string',...
             'True Ob error','Assumed Ob error','Ob bias','Ob bias factor',...
@@ -365,7 +365,7 @@ end
 %% Bias correction parameters input
 function biascor = get_bias_correction_parms()
     name='Bias Correction Input';
-    numlines=1;
+    numlines=[1 60];
     opts='on';
     prompt={'Apply BC to obs','Apply BC to model AND simobs',...
             'Apply BC ONLY to simobs'};
@@ -555,7 +555,7 @@ end
 function biascor = apply_model_smoothers(biascor)
     % Apply smoother to increments
     name='Increment Smoother';
-    numlines=1;
+    numlines=[1 60];
     opts='on';
     prompt={'Smoother type','Smoother parmlist',};
     default={'Savitzky-Golay','[9, 21]'};
@@ -579,7 +579,7 @@ function biascor = apply_obs_smoothers(biascor)
 % Needs a rewrite following biascor_test
     % Apply smoother to innovationss
     name='Innnovation Smoother';
-    numlines=1;
+    numlines=[1 60];
     opts='on';
     prompt={'Smoother type','Smoother parmlist',};
     default={'Savitzky-Golay','[9, 21]'};
