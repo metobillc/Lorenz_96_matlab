@@ -1,5 +1,5 @@
 function plot_results(first,current_cycle,prior_mse_norm,prior_varse_norm,...
-    post_mse_norm,post_varse_norm,Ncycles,printcycle,ci,K)
+    post_mse_norm,post_varse_norm,Ncycles,da)
 persistent h old_cycle old_post_mse_norm old_post_stderr cifac
 % persistent old_prior_mse_norm old_prior_stderr
 if first==true
@@ -7,11 +7,11 @@ if first==true
     xlabel('Cycles');
     ylabel('Normalized Mean Squared Error');
     ttl1=sprintf('K=%d: Normalized Mean Error Estimate = (%8.6f,%8.6f)',...
-        K,prior_mse_norm,post_mse_norm);
-    ttl2=sprintf('(%4.1f%% 1-Sided CI)',100*ci);
+        da.K,prior_mse_norm,post_mse_norm);
+    ttl2=sprintf('(%4.1f%% 1-Sided CI)',100*da.ci);
     title({ttl1,ttl2});
     % One-sided is more appropriate for a squared quantity
-    cifac = abs(norminv(1-ci));
+    cifac = abs(norminv(1-da.ci));
     xlim([1 Ncycles]);
     ylim([0,Inf]);
     grid on
@@ -51,9 +51,9 @@ if first==false
     plot(times,[old_post_mse_norm,post_mse_norm],'b-',...
         times,[old_post_upper,post_upper],'r--');
 end
-ttl1=sprintf('K=%d: Normalized Posterior Mean Squared Error Estimate',K);
+ttl1=sprintf('K=%d: Normalized Posterior Mean Squared Error Estimate',da.K);
 ttl2=sprintf('%8.6f + %8.6f (%4.1f%% 1-Sided CI)',...
-    post_mse_norm,cifac*post_stderr,100*ci);
+    post_mse_norm,cifac*post_stderr,100*da.ci);
 title({ttl1,ttl2});
 legend('Posterior MSE', '1-Sided CI')
 % old_prior_mse_norm = prior_mse_norm;
