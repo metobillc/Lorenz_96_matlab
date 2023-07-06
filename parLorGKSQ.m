@@ -47,10 +47,11 @@ ics = floor(linspace(1,size(Xt,2),da.K+1)); % K x 1
 XIC = Xt(:,ics(2:end)); % Nx x K
 % Now can discard unneeded cycles
 Xt = Xt(:,1:run.Ncycles);  % Nx x Ncycles
+Nx = size(Xt,1);
 
 %% 6) Observation parameters
 % obs: seed,first,skip,err_true,err_assumed,bias,biasfac
-obs = get_obs_parms();
+obs = get_obs_parms(Nx);
 if run.use_obs_file
     % What if nature.fobs has different obs params? Should they be loaded?
     obs.path = nature.obspath;
@@ -58,7 +59,6 @@ if run.use_obs_file
 end
 
 %% 7) Forward model
-Nx = size(Xt,1);
 [H, R, Rhat, obs_locs_post] = get_forward_model(Nx, obs, run);
 % NB obs_locs_post is a column vector, want a row vec in structs
 
@@ -179,6 +179,10 @@ function [infolder, run] = get_run_parms(mainfolder)
     run.save_state = logical(str2double(answer{i}));i=i+1;
     % Display ring movie at end of run
     run.ring_movie = logical(str2double(answer{i}));i=i+1;
+    % Unobserved threshold (at least 10 gridpoints)
+    run.unobserved = str2double(answer{i});i=i+1;
+    mingap = 10;
+    if run.unobserved < mingap; run.unobserved = 0; end
     % Ring movie frame rate
     run.ring_movie_frame_rate = str2double(answer{i});i=i+1;
     % Use parallel toolbox if available
@@ -325,7 +329,7 @@ function da = get_da_parms()
 end
 
 %% Observation parameters input
-function obs = get_obs_parms()
+function obs = get_obs_parms(Nx)
     name='Obs Parameters';
     numlines=[1 60];
     opts='on';
@@ -362,11 +366,16 @@ function obs = get_obs_parms()
     obs.anchor_bias = str2double(answer{i});i=i+1;
     % anchor observation multiplicative bias factor
     obs.anchor_biasfac = str2double(answer{i});
+
     % Only 1 ob allowed at each gridpoint for now, and
     obs.all_locs = union(obs.standard_locs, obs.anchor_locs);
-    % Anchor obs take precedence
+    if isempty(obs.all_locs)
+        % Construct from first, skip
+        obs.all_locs = first:skip:Nx;
+    end
+    % standard_locs are the non-anchorlocs
     obs.standard_locs = setdiff(obs.all_locs, obs.anchor_locs);
-    % Store indices of standard and anchor obs
+    % Store indices of standard and anchor obs within all obs
     obs.standard_idx = find(ismember(obs.all_locs, obs.standard_locs));
     obs.anchor_idx = find(ismember(obs.all_locs, obs.anchor_locs));
 end
