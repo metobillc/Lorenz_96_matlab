@@ -121,16 +121,10 @@ save(parmfile,'run','nature','model','da','obs','biascor');
 
 %% Cycling DA run
 % Execute up to Ncycles-1 DA cycles
-parallel = ver('parallel');
-if isempty(parallel)
-    run.parallel = 0;
-end
-if run.parallel==1
-    parallelize(run.reserve);
-end
+parallelize(run);
 tic;
 [ensmean,post_stmse,post_stvarmse,bmse_pct,bvar_pct] = ...
-    parDA_GKSQ(XIC,Xt,y,outfolder,H,Rhat,biascor,da,model,nature,run);
+    parDA_GKSQ(XIC,Xt,y,outfolder,H,Rhat,biascor,da,model,nature,run,obs);
 toc
 fprintf('Posterior MSE %7.5f, %4.1f%% due to squared bias\n',...
     round(post_stmse,3,'significant'),round(bmse_pct,3,'significant'));
@@ -478,9 +472,21 @@ function biascor = bias_interpolate(Nx, allvars, biascor)
 end
 
 %% Parallelization options and initialization
-function parallelize(reserve)
-    NPROCS = feature('numcores');
-    parprocs = max(1, NPROCS - abs(floor(reserve))); % Use all processes available
+function parallelize(run)
+    run.parallel = 0;
+    parallel = ver('parallel');
+    if isempty(parallel)
+        fprintf('Parallel Toolbox not available, running with a single core.\n')
+        return
+    else
+        run.parallel = 1;
+    end
+    nprocs = feature('numcores');
+    % Use all processes available, holding back a reserve
+    reserve = abs(floor(run.reserve));
+    parprocs = max(1, nprocs - reserve);
+    fprintf('This machine has %d cores, %d used for ensemble.\n',...
+        nprocs, parprocs)
     if parprocs > 1 && isempty(gcp)
         parpool(parprocs);
     end
