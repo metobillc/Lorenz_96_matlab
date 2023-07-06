@@ -3,7 +3,7 @@
 % Using Lorenz 96 Model I, II or III
 % Global Kalman Square Root filter
 % Bill Campbell
-% Last modified 7/1/2023
+% Last modified 7/6/2023
 
 start = datestr(clock);
 fprintf('Started: %s\n',start);
@@ -66,7 +66,7 @@ Nx = size(Xt,1);
 if run.use_obs_file
     y = load_obs(obs.path, obs.file);  % observations consistent with nature run
     y = y(:, nature.spinup+1:end); % must discard same spinup period
-    if (run.Ncycles > size(y,2))
+    if run.Ncycles > size(y,2)
         error('Error -- obs file not long enough: Ncycles=%d\n > len(obs)',...
               run.Ncycles,size(y,2));
     else % Only use needed portion of obs
@@ -76,7 +76,7 @@ else
     yt = observe_truth(Xt, H, R, obs.seed); % Nobs x Ncycles
     % Construct imperfect obs
     y = apply_obs_bias(yt, obs); % Nobs x Ncycles
-    if run.unit_tests==1; test_apply_obs_bias(y, yt, obs); end
+    if run.unit_tests; test_apply_obs_bias(y, yt, obs); end
 end
 
 %% 9) Bias correction parameters and corrections from stats files
@@ -84,28 +84,28 @@ end
 %         incr_smoother,incr_smoother_parms
 biascor = get_bias_correction_parms();
 biascor.obs_locs_post = obs_locs_post;
-if (biascor.apply_to_model || biascor.apply_to_simobs_only)
+if biascor.apply_to_model || biascor.apply_to_simobs_only
     biascor = get_model_bias_corrections(infolder, biascor);
-    if run.unit_tests==1; test_model_bias_corrections(biascor); end
+    if run.unit_tests; test_model_bias_corrections(biascor); end
 end
-if (biascor.apply_to_obs)
+if biascor.apply_to_standard_obs
     biascor = get_obs_bias_corrections(Nx, infolder, biascor);
-    if run.unit_tests==1; test_get_obs_bias_corrections(biascor); end
+    if run.unit_tests; test_get_obs_bias_corrections(biascor); end
 end
 
 %% 10) Apply smoothers to innovations, increments used for bias correction
 % biascor: AmB, OmB
-if (biascor.apply_to_model || biascor.apply_to_simobs_only)
+if biascor.apply_to_model || biascor.apply_to_simobs_only
     biascor = apply_model_smoothers(biascor);
-    if run.unit_tests==1; test_apply_model_smoothers(biascor); end
+    if run.unit_tests; test_apply_model_smoothers(biascor); end
 end
-if (biascor.apply_to_obs)
+if biascor.apply_to_standard_obs
     biascor = apply_obs_smoothers(biascor);
-    if run.unit_tests==1; test_apply_obs_smoothers(biascor); end
+    if run.unit_tests; test_apply_obs_smoothers(biascor); end
 end
 
 %% 11) Parameters diagnostic print and save
-if run.verbose==1
+if run.verbose >= 1
     fprintf('Parms values:\n');
     display(run);
     display(nature);
@@ -159,13 +159,13 @@ function [infolder, run] = get_run_parms(mainfolder)
     prompt={'Experiment Name','Cycles (4/dy)','Cycles per print',...
             'Verbose','Progress plot','Unit tests',...
             'Use obs file','Save state',...
-            'Ring movie','Frame rate (4=1/dy)',...
+            'Ring movie','Unobserved threshold (>=10)','Frame rate (4=1/dy)',...
             'Use parallel toolbox','Reserved procs'};
-    default={'mytest','500','25',...
-             '1','1','1',...
+    default={'level_0','1000','25',...
+             '0','0','0',...
              '0','0',...
-             '1','12',...
-             '1','4'};
+             '1','100','12',...
+             '1','0'};
     answer=inputdlg(prompt,name,numlines,default,opts);i=1;
     % Unique experiment name
     run.expname = answer{i};i=i+1;
@@ -200,7 +200,7 @@ function outfolder = create_outfolder(infolder, run)
         question = sprintf('Directory %s exists, OK to overwrite?',...
             outfolder);
         overwrite = questdlg(question, 'Experiment Exists');
-        if strcmp(overwrite, 'Yes') ~= true
+        if ~strcmp(overwrite, 'Yes')
             error('Aborting run to avoid potential overwrite of prior experiment %s in %s',...
                   run.expname,outfolder);
         end
@@ -285,7 +285,7 @@ function da = get_da_parms()
     opts='on';
     prompt={'Cycle skip','Ensemble size','Confidence level','Spinup',...
             'Prior inflation','Localization type','Localization radius',...
-            'Filter small-scales'};
+            'Filter small scales'};
     default={'1','500','0.95','100',...
              '1.64','gc','160',...
              '0'};
@@ -297,10 +297,10 @@ function da = get_da_parms()
     % Confidence level (0.95 is typical)
     da.ci = str2double(answer{i});i=i+1;
     da.ci = abs(da.ci);
-    if (da.ci > 1.0) % test for pctg rather than decimal
+    if da.ci > 1.0 % test for pctg rather than decimal
         da.ci = 100 * da.ci;
     end
-    if (da.ci > 1.0)
+    if da.ci > 1.0
         da.ci = 0.95; % default to 95%
     end
     % DA spinup
@@ -339,9 +339,10 @@ function obs = get_obs_parms()
             'True Ob error','Assumed Ob error','Ob bias','Ob bias factor',...
             'Anchor obs_loc string', 'Anchor Ob error', 'Anchor Assumed Ob error',...
             'Anchor ob bias','Anchor ob bias factor'};
-    default={'4249687','1','4','[100:4:400 300 600:8:960 960]'...
-             '1.0','1.0','0.3','1.0',...
-             '[100:8:400 400 600:8:960 960]','0.10','0.10','0.0','1.0'};
+    default={'4249687','1','1','[]',...
+             '1.0','1.0','0.0','1.0',...
+             '[]','0.20','0.20',...
+             '0.0','1.0'};
     answer=inputdlg(prompt,name,numlines,default,opts);i=1;
     % Seed for rng to draw obs
     obs.seed = str2double(answer{i});i=i+1;
@@ -349,7 +350,7 @@ function obs = get_obs_parms()
     obs.first = str2double(answer{i});i=i+1;
     % Variables skipped (unobserved)
     obs.skip = str2double(answer{i});i=i+1;
-    % Fully customized obs locations
+    % Fully customized obs locations (MUST use str2num)
     obs.standard_locs = unique(str2num(answer{i}));i=i+1;
     % observation error variance
     obs.err_true = str2double(answer{i});i=i+1;
@@ -358,7 +359,7 @@ function obs = get_obs_parms()
     obs.bias = str2double(answer{i});i=i+1;
     % observation multiplicative bias factor
     obs.biasfac = str2double(answer{i});i=i+1;
-    % Fully customized obs locations
+    % Fully customized obs locations (MUST use str2num)
     obs.anchor_locs = unique(str2num(answer{i}));i=i+1;
     % observation error variance
     obs.anchor_err_true = str2double(answer{i});i=i+1;
@@ -381,13 +382,13 @@ function biascor = get_bias_correction_parms()
     name='Bias Correction Input';
     numlines=[1 60];
     opts='on';
-    prompt={'Apply BC to obs','Apply BC to model AND simobs',...
+    prompt={'Apply BC to non-anchor obs','Apply BC to model AND simobs',...
             'Apply BC ONLY to simobs'};
     default={'0','0',...
              '0'};
     answer=inputdlg(prompt,name,numlines,default,opts);i=1;
     % apply bias correction to obs
-    biascor.apply_to_obs = logical(str2double(answer{i}));i=i+1;
+    biascor.apply_to_standard_obs = logical(str2double(answer{i}));i=i+1;
     % apply bias correction to model (and therefore simulated obs)
     biascor.apply_to_model = logical(str2double(answer{i}));i=i+1;
     % apply bias correction ONLY to simulated obs, not model
@@ -539,9 +540,7 @@ function [H, R, Rhat, obs_locs] = get_forward_model(Nx, obs, run)
     % H will be Nobs x Nx, R will be Nobs x Nobs, Nobs <= Nx
     [~, H, R, obs_locs] = forward(oblist, rlist_true);
     [~, ~, Rhat] = forward(oblist, rlist_assumed);
-    if run.unit_tests==1
-        test_get_forward_model(obs,rlist_true)
-    end
+    if run.unit_tests; test_get_forward_model(obs,rlist_true); end
 end
 
 %% Observe the true state
