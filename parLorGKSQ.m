@@ -139,7 +139,7 @@ fprintf('(Posterior varMSE %7.5f, %4.1f%% due to squared bias)\n',...
 
 %% Plot time series of truth and ensemble mean
 if run.ring_movie
-    plot_ensmean_truth(Xt,ensmean,run.ring_movie_frame_rate)
+    plot_ensmean_truth(Xt,ensmean,run,obs)
 end
 
 %% Output file listing
@@ -487,22 +487,46 @@ function parallelize(reserve)
 end
 
 %% Plot time series of truth and ensemble mean
-function plot_ensmean_truth(Xt,ensmean,tskip)
+function plot_ensmean_truth(Xt,ensmean,run,obs)
     myfilt = 'GKSQ';
     [Nx,Ncycles] = size(Xt);
+    % Shade unobserved regions
+    all_locs = obs.all_locs;
+    thresh = run.unobserved;
     figure;
-    plot(Xt(:,1),'k-');
-    hold on; grid on;
+    if thresh > 0
+        idx = find(diff(all_locs) >= thresh);
+        ngaps = length(idx);
+        ph = zeros(1,ngaps+2);
+        for i = 1:ngaps
+            ph(i) = patch([all_locs(idx) all_locs(idx) all_locs(idx+1) all_locs(idx+1)],...
+                [-15 20 20 -15],'b','FaceAlpha', 0.2);
+        end
+        % Check for gap around first point
+        if (min(all_locs) + Nx - max(all_locs)) >= thresh
+            ph(ngaps+1) = patch([1 1 min(all_locs) min(all_locs)],...
+                [-15 20 20 -15],'b','FaceAlpha', 0.2);
+            ph(ngaps+2) = patch([max(all_locs) max(all_locs) Nx Nx],....
+                [-15 20 20 -15],'b','FaceAlpha', 0.2);
+        end
+    end
+    hold on;
+    plot(Xt(:,1),'k-'); grid on;
     plot(ensmean(:,1),'r-');
     ylim([-15,20]);
     xlim([1,Nx]);
     xtt = floor(Nx/16);
     xticks([1 xtt:xtt:Nx]);
-    legend('Truth','Ensmean');
+    legend({['Hic Sunt' newline 'Dracones'],'','','Truth','Ensmean'})
     title(sprintf('%s time=1',myfilt));
+    tskip = run.ring_movie_frame_rate;
     for t=tskip+1:tskip:Ncycles
         pause(0.5);
-        clf;
+        axesHandlesToChildObjects = findobj(gca, 'Type', 'line');
+        if ~isempty(axesHandlesToChildObjects)
+          delete(axesHandlesToChildObjects);
+          legend off
+        end
         plot(Xt(:,t),'k-');
         hold on; grid on;
         plot(ensmean(:,t),'r-');
@@ -510,7 +534,7 @@ function plot_ensmean_truth(Xt,ensmean,tskip)
         xlim([1,Nx]);
         xtt = floor(Nx/16);
         xticks([1 xtt:xtt:Nx]);
-        legend('Truth','Ensmean');
+        legend({['Hic Sunt' newline 'Dracones'],'','','Truth','Ensmean'})
         title(sprintf('%s time=%d',myfilt,t));
     end % for t=2:Ncycles
 end
@@ -697,6 +721,9 @@ function test_get_obs_bias_corrections(biascor)
     if yy(1) > 0; yy(1) = 0; end
     if yy(2) < 0; yy(2) = 0; end
     ylim(yy);
+    Nx = length(biascor.OmB);
+    xlim([1 Nx]);
+    set(gca,'xtick',[1 get(gca,'xtick') Nx]);
     [fpath, fname, ~] = fileparts(biascor.fname_OmHB_prior);
     title({['O - H*B from ',fpath], fname},'Interpreter','none');
     legend('Prior OmHB','');
