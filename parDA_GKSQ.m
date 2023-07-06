@@ -122,7 +122,7 @@ for ncycle = 1:Ncycles-1
         if run.progress_plot
             plot_results(first,ncycle,prior_space_mse_norm,...
                 prior_space_varse_norm,post_space_mse_norm,...
-                post_space_varse_norm,Ncycles,run.printcycle,da.ci,da.K);
+                post_space_varse_norm,Ncycles,da);
         end
         if first
             t_estimate = Ncycles./run.printcycle.*telapsed;
