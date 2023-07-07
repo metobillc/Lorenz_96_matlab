@@ -1,6 +1,6 @@
 % This script is for data exploration
 % Bill Campbell
-% Last modified 6/21/2022
+% Last modified 7/21/2022
 
 %% Load prior, posterior, truth, and obs
 outfolder='C:\Users\campbell\Documents\MATLAB\Lorenz_96_model\';
